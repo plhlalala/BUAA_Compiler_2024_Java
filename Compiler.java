@@ -1,8 +1,7 @@
-import frontend.ErrorRecord;
-import frontend.Lexer;
-import frontend.Token;
+import frontend.lexer.ErrorRecord;
+import frontend.lexer.Lexer;
+import frontend.lexer.Token;
 
-import javax.swing.*;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;

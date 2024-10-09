@@ -1,4 +1,4 @@
-package frontend;
+package frontend.lexer;
 
 public class ErrorRecord {
     private final ErrorType errorType;

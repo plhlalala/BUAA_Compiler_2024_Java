@@ -1,4 +1,4 @@
-package frontend;
+package frontend.lexer;
 
 import java.io.IOException;
 import java.io.PushbackReader;
@@ -85,7 +85,7 @@ public class Lexer {
             if (nextChar == '/') {
                 while (ch != '\n') {
                     ch = reader.read();
-                    if (ch == -1){
+                    if (ch == -1) {
                         return false;
                     }
                 }
@@ -180,7 +180,8 @@ public class Lexer {
                     token = new Token(doubleChar.substring(0, 1), doubleCharOperators.get(right), lineNum);
                     return true;
                 }
-                reader.unread(nextChar);
+
+
             }
         }
         value = sb.substring(0, 1);
