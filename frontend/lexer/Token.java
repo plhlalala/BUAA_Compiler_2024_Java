@@ -19,8 +19,24 @@ public class Token {
         return this.type;
     }
 
+    public boolean isMatch(LexType type) {
+        return this.type == type;
+    }
+
+    public boolean isNotMatch(LexType type) {
+        return this.type != type;
+    }
+
     public int getLineNum() {
         return this.lineNum;
+    }
+
+    public boolean isBtype() {
+        return this.type == LexType.INTTK || this.type == LexType.CHARTK;
+    }
+
+    public boolean isFuncType() {
+        return this.type == LexType.VOIDTK || isBtype();
     }
 
     @Override

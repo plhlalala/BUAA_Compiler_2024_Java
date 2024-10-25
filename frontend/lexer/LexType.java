@@ -49,7 +49,16 @@ public enum LexType {
         value = s;
     }
 
+    public String getTypename() {
+        return this.name();
+    }
+
     public String getValue() {
         return value;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString() + " " + value;
     }
 }

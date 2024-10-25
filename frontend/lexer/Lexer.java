@@ -1,16 +1,14 @@
 package frontend.lexer;
 
+import frontend.error.ErrorRecord;
+import frontend.error.ErrorType;
+
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Lexer {
-    private final PushbackReader reader;
-    private int lineNum;
-    private Token token;
-    private ArrayList<ErrorRecord> errorRecords;
-
     private static final HashMap<String, LexType> reservedWords = new HashMap<String, LexType>() {{
         put("main", LexType.MAINTK);
         put("const", LexType.CONSTTK);
@@ -35,7 +33,6 @@ public class Lexer {
         put("==", LexType.EQL);
         put("!=", LexType.NEQ);
     }};
-
     private static final HashMap<Character, LexType> singleCharTokens = new HashMap<Character, LexType>() {{
         put('+', LexType.PLUS);
         put('-', LexType.MINU);
@@ -55,6 +52,10 @@ public class Lexer {
         put('}', LexType.RBRACE);
         put('!', LexType.NOT);
     }};
+    private final PushbackReader reader;
+    private int lineNum;
+    private Token token;
+    private ArrayList<ErrorRecord> errorRecords;
 
     public Lexer(PushbackReader reader, ArrayList<ErrorRecord> errorRecords) {
         this.reader = reader;
@@ -180,13 +181,13 @@ public class Lexer {
                     token = new Token(doubleChar.substring(0, 1), doubleCharOperators.get(right), lineNum);
                     return true;
                 }
-
-
+                reader.unread(nextChar);
             }
         }
         value = sb.substring(0, 1);
         type = singleCharTokens.get(value.charAt(0));
         token = new Token(value, type, lineNum);
+        // System.out.println("lexer：" + token + " " + lineNum + " " + value);
         return true;
     }
 
