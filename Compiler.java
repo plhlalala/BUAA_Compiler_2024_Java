@@ -26,15 +26,21 @@ public class Compiler {
              PrintWriter outputWriter = new PrintWriter(new FileWriter(lexerOutputPath));
              PrintWriter errorWriter = new PrintWriter(new FileWriter(errorOutputPath));
              PrintWriter symbolWriter = new PrintWriter(new FileWriter(symbolOutputPath));) {
+            ArrayList<ErrorRecord> lexerErrorRecords = new ArrayList<>();
+            ArrayList<ErrorRecord> parserErrorRecords = new ArrayList<>();
+            ArrayList<ErrorRecord> visitorErrorRecords = new ArrayList<>();
             ArrayList<ErrorRecord> errorRecords = new ArrayList<>();
-            Lexer lexer = new Lexer(reader, errorRecords);
-            Parser parser = new Parser(lexer, errorRecords);
+            Lexer lexer = new Lexer(reader, lexerErrorRecords);
+            Parser parser = new Parser(lexer, parserErrorRecords);
             CompUnit compUnit = parser.parse();
 //            if (compUnit != null) {
 //                compUnit.analyze(outputWriter);
 //            }
-            Visitor visitor = new Visitor(errorRecords);
+            Visitor visitor = new Visitor(visitorErrorRecords);
             visitor.visitCompUnit(compUnit);
+            errorRecords.addAll(lexerErrorRecords);
+            errorRecords.addAll(parserErrorRecords);
+            errorRecords.addAll(visitorErrorRecords);
             if (!errorRecords.isEmpty()) {
                 errorRecords.sort((o1, o2) -> {
                     if (o1.getLineNumber() != o2.getLineNumber()) {

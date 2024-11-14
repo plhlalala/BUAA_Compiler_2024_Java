@@ -1,16 +1,8 @@
-void my_print(int param) {
-    if (1 == 0) {
-        int a = 1;
-        if (2 == 1) {
-            return 1;
-        }
-        return (1+ 10 ) *10;
-    }
-    else
-        return 20;
-
-    return (param + 12) * 10;
-}
 int main() {
+    a
+    a[2+b] = 10
+    a[2] = 10
+    a = 10
+    a = getint()
     return 0;
 }

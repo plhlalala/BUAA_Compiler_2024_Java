@@ -57,11 +57,12 @@ import java.util.ArrayList;
 // 离开解析函数后，curToken应已经推进，指向下一个将要解析的符号，而不是已经处理完毕的部分。
 
 public class Parser {
-    ArrayList<ErrorRecord> errorRecords;
-    TokenBuf tokenBuf;
-    Token curToken;
-    Token nextToken;
-    Token nextnextToken;
+    public ArrayList<ErrorRecord> errorRecords;
+    public int errorLenBeforeRecover = 0;
+    public TokenBuf tokenBuf;
+    public Token curToken;
+    public Token nextToken;
+    public Token nextnextToken;
 
     public Parser(Lexer lexer, ArrayList<ErrorRecord> errorRecords) throws IOException {
         this.errorRecords = errorRecords;
@@ -152,8 +153,14 @@ public class Parser {
             }
             return exp_stmt;
         } else if (curToken.isMatch(LexType.IDENFR)) { // LVal '=' 3种 和 Lval
-            LVal lVal = parseLVal();
+            tokenBuf.startRecovery();
+            errorLenBeforeRecover = errorRecords.size();
+            Exp exp = parseExp();
             if (curToken.isMatch(LexType.ASSIGN)) {
+                tokenBuf.abortRecovery();
+                subErrorList(errorLenBeforeRecover);
+                curToken = tokenBuf.get(); //刷新到第一个冲突的字符
+                LVal lVal = parseLVal();
                 curToken = tokenBuf.get();
                 if (curToken.isMatch(LexType.GETINTTK)) {
                     return parseGetIntStmt(lVal);
@@ -163,8 +170,9 @@ public class Parser {
                     return parseAssignLvalStmt(lVal);
                 }
             } else {
+                tokenBuf.doneRecovery();
                 Exp_stmt exp_stmt = new Exp_stmt();
-                exp_stmt.exp = parseExp(lVal);
+                exp_stmt.exp = exp;
                 if (curToken.isMatch(LexType.SEMICN)) {
                     exp_stmt.hasSemicolon = true;
                     curToken = tokenBuf.get();
@@ -686,37 +694,9 @@ public class Parser {
         return addExp;
     }
 
-    private AddExp parseAddExp(LVal lVal) {
-        AddExp addExp = new AddExp();
-        addExp.mulExp = parseMulExp(lVal);
-        while (curToken.isMatch(LexType.PLUS) || curToken.isMatch(LexType.MINU)) {
-            AddExp newAddExp = new AddExp();
-            newAddExp.op = curToken.getType();
-            newAddExp.addExp = addExp;
-            curToken = tokenBuf.get();
-            newAddExp.mulExp = parseMulExp();
-            addExp = newAddExp;
-        }
-        return addExp;
-    }
-
     private MulExp parseMulExp() {
         MulExp mulExp = new MulExp();
         mulExp.unaryExp = parseUnaryExp();
-        while (curToken.isMatch(LexType.MULT) || curToken.isMatch(LexType.DIV) || curToken.isMatch(LexType.MOD)) {
-            MulExp newMulExp = new MulExp();
-            newMulExp.op = curToken.getType();
-            newMulExp.mulExp = mulExp;
-            curToken = tokenBuf.get();
-            newMulExp.unaryExp = parseUnaryExp();
-            mulExp = newMulExp;
-        }
-        return mulExp;
-    }
-
-    private MulExp parseMulExp(LVal lVal) {
-        MulExp mulExp = new MulExp();
-        mulExp.unaryExp = parseUnaryExp(lVal);
         while (curToken.isMatch(LexType.MULT) || curToken.isMatch(LexType.DIV) || curToken.isMatch(LexType.MOD)) {
             MulExp newMulExp = new MulExp();
             newMulExp.op = curToken.getType();
@@ -757,11 +737,6 @@ public class Parser {
         return unaryExp;
     }
 
-    private UnaryExp parseUnaryExp(LVal lVal) {
-        UnaryExp unaryExp = new UnaryExp();
-        unaryExp.primaryExp = parsePrimaryExp(lVal);
-        return unaryExp;
-    }
 
     //函数实参表 FuncRParams → Exp { ',' Exp }
     private FuncRParams parseFuncRParams() {
@@ -807,13 +782,6 @@ public class Parser {
         return primaryExp;
     }
 
-    // PrimaryExp → '(' Exp ')' | LVal | Number | Character// j
-    private PrimaryExp parsePrimaryExp(LVal lVal) {
-        PrimaryExp primaryExp = new PrimaryExp();
-        primaryExp.lval = lVal;
-        return primaryExp;
-    }
-
     private LVal parseLVal() {
         LVal lVal = new LVal();
         lVal.linenum = curToken.getLineNum();
@@ -853,12 +821,6 @@ public class Parser {
         return exp;
     }
 
-    private Exp parseExp(LVal lVal) {
-        Exp exp = new Exp();
-        exp.addExp = parseAddExp(lVal);
-        return exp;
-    }
-
     /**
      * @param Token (,+,-,INTCON,CHARCON,IDENFR
      */
@@ -884,5 +846,19 @@ public class Parser {
     private boolean isDeclToken(Token currentToken, Token nextToken, Token nextnextToken) {
         return currentToken.isMatch(LexType.CONSTTK) ||
                 (currentToken.isBtype() && nextToken.isMatch(LexType.IDENFR) && nextnextToken.isNotMatch(LexType.LPARENT));
+    }
+
+    private boolean subErrorList(int len) {
+        if (errorRecords.size() < len) {
+            return false;
+        } else if (errorRecords.size() == len) {
+            return true;
+
+        } else {
+            while (errorRecords.size() > len) {
+                errorRecords.remove(errorRecords.size() - 1);
+            }
+            return true;
+        }
     }
 }
