@@ -172,7 +172,10 @@ public class BasicBlock extends Value {
 
     @Override
     public String getName() {
-        return "block" + super.getName();
+        if (super.nameIsNull()) {
+            super.setName("block" + BlockNameProvider.getProvider().alloc());
+        }
+        return super.getName();
     }
 
     public void dump(PrintWriter writer) {

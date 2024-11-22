@@ -40,9 +40,9 @@ public class Compiler {
             Parser parser = new Parser(lexer, parserErrorRecords);
 
             CompUnit compUnit = parser.parse();
-//            if (compUnit != null) {
-//                compUnit.analyze(outputWriter);
-//            }
+            if (compUnit != null) {
+                compUnit.analyze(outputWriter);
+            }
 
             Visitor_Symtable visitor = new Visitor_Symtable(visitorErrorRecords);
             visitor.visitCompUnit(compUnit);
@@ -56,9 +56,9 @@ public class Compiler {
                     }
                     return 0;
                 });
-//                for (ErrorRecord errorRecord : errorRecords) {
-//                    errorWriter.println(errorRecord.getLineNumber() + " " + errorRecord.getErrorType().getCode());
-//                }
+                for (ErrorRecord errorRecord : errorRecords) {
+                    errorWriter.println(errorRecord.getLineNumber() + " " + errorRecord.getErrorType().getCode());
+                }
             } else {
                 Visitor_IR irVisitor = new Visitor_IR();
                 irVisitor.visitCompUnit(compUnit);

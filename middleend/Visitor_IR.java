@@ -225,12 +225,12 @@ public class Visitor_IR {
             for (int i = 0; i < tmp.irValueList.size(); i++) {
                 Value ptr = curBlock.createGetElementPtrInstr(varSym.irValue, getArrayStartFromZero(new ImmValueI32(i)));
                 Value value = tmp.irValueList.get(i);
-                typeConvertAndStore(ptr, value);
+                convertTypeBeforeStore(ptr, value);
             }
         } else {
             Value ptr = varSym.irValue;
             Value value = tmp.irValueList.get(0);
-            typeConvertAndStore(ptr, value);
+            convertTypeBeforeStore(ptr, value);
         }
     }
 
@@ -238,17 +238,6 @@ public class Visitor_IR {
         if (varSym.varType.isArray) {
             varSym.arraySize = visitConstExp(constExp).constInt;
         }
-    }
-
-    private void typeConvertAndStore(Value ptr, Value value) {
-        if (ptr.getTypeOfValue().getBaseType() != value.getTypeOfValue().getBaseType()) {
-            if (ptr.getTypeOfValue().getBaseType() == BaseTypeEnum.INT) {
-                value = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), value);
-            } else {
-                value = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), value);
-            }
-        }
-        curBlock.createStoreInstr(value, ptr);
     }
 
     public VisitResult visitConstExp(ConstExp constExp) {
@@ -536,7 +525,7 @@ public class Visitor_IR {
         VisitResult expResult = visitExp(forStmt.exp);
         Value ptr = lvalResult.irValue;
         Value value = expResult.irValue;
-        typeConvertAndStore(ptr, value);
+        convertTypeBeforeStore(ptr, value);
     }
 
     public VisitResult visitCond(Cond cond) {
@@ -553,7 +542,7 @@ public class Visitor_IR {
             Value lvalPtr = tmp.irValue;
             VisitResult tmp2 = visitExp(assignLval_stmt.exp);
             Value value = tmp2.irValue;
-            typeConvertAndStore(lvalPtr, value);
+            convertTypeBeforeStore(lvalPtr, value);
         }
         return new VisitResult();
     }
@@ -587,14 +576,7 @@ public class Visitor_IR {
         if (lAndExp.lAndExp == null) {
             VisitResult result = new VisitResult();
             VisitResult tmp = visitEqExp(lAndExp.eqExp);
-            if (tmp.irValue.getTypeOfValue().getBaseType() != BaseTypeEnum.BOOL) {
-                if (tmp.constInt != null) {
-                    tmp.irValue = tmp.constInt == 0 ? new ImmValueBool(0) : new ImmValueBool(1);
-                } else {
-                    tmp.irValue = curBlock.createICmpInstr(IcmpCondEnum.NE, tmp.irValue, new ImmValueI32(0));
-                }
-            }
-            curBlock.createBrInstr(null, null, tmp.irValue);
+            convertTo_I1_IcmpInstr(tmp);
             result.andBlocks.add(curBlock);
             curBlock = curFunc.createBasicBlock(); // 一个And对应一个Block
             return result;
@@ -606,14 +588,7 @@ public class Visitor_IR {
             BasicBlock last = tmp.getLastAndBlock();
             BrInstr brInstr = (BrInstr) (last.getLastInstruction());
             brInstr.setTrueBranch(curBlock);
-            if (tmp2.irValue.getTypeOfValue().getBaseType() != BaseTypeEnum.BOOL) {
-                if (tmp2.constInt != null) {
-                    tmp2.irValue = tmp2.constInt == 0 ? new ImmValueBool(0) : new ImmValueBool(1);
-                } else {
-                    tmp2.irValue = curBlock.createICmpInstr(IcmpCondEnum.NE, tmp2.irValue, new ImmValueI32(0));
-                }
-            }
-            curBlock.createBrInstr(null, null, tmp2.irValue);
+            convertTo_I1_IcmpInstr(tmp2);
             visitResult.andBlocks.addAll(tmp.andBlocks);
             visitResult.andBlocks.add(curBlock);
             curBlock = curFunc.createBasicBlock(); // 处理完一个And后,新建一个Block
@@ -637,8 +612,8 @@ public class Visitor_IR {
                     visitResult.irValue = new ImmValueBool(visitResult.constInt);
                 }
             } else {
-                convertToI32(tmp);
-                convertToI32(tmp2);
+                convertToI32IfNot(tmp);
+                convertToI32IfNot(tmp2);
                 if (eqExp.type.equals(LexType.EQL)) {
                     visitResult.irValue = curBlock.createICmpInstr(IcmpCondEnum.EQ, tmp.irValue, tmp2.irValue);
                 } else if (eqExp.type.equals(LexType.NEQ)) {
@@ -671,8 +646,8 @@ public class Visitor_IR {
                     visitResult.irValue = new ImmValueBool(visitResult.constInt);
                 }
             } else {
-                convertToI32(tmp);
-                convertToI32(tmp2);
+                convertToI32IfNot(tmp);
+                convertToI32IfNot(tmp2);
                 if (relExp.type.equals(LexType.LSS)) {
                     visitResult.irValue = curBlock.createICmpInstr(IcmpCondEnum.SLT, tmp.irValue, tmp2.irValue);
                 } else if (relExp.type.equals(LexType.LEQ)) {
@@ -704,8 +679,8 @@ public class Visitor_IR {
                     visitResult.irValue = new ImmValueI32(visitResult.constInt);
                 }
             } else {
-                convertToI32(tmp);
-                convertToI32(tmp2);
+                convertToI32IfNot(tmp);
+                convertToI32IfNot(tmp2);
                 if (addExp.op.equals(LexType.PLUS)) {
                     visitResult.irValue = curBlock.createAddInstr(tmp.irValue, tmp2.irValue);
                 } else if (addExp.op.equals(LexType.MINU)) {
@@ -737,8 +712,8 @@ public class Visitor_IR {
                     visitResult.irValue = new ImmValueI32(visitResult.constInt);
                 }
             } else {
-                convertToI32(tmp);
-                convertToI32(tmp2);
+                convertToI32IfNot(tmp);
+                convertToI32IfNot(tmp2);
                 if (mulExp.op.equals(LexType.MULT)) {
                     visitResult.irValue = curBlock.createMulInstr(tmp.irValue, tmp2.irValue);
                 } else if (mulExp.op.equals(LexType.DIV)) {
@@ -748,12 +723,6 @@ public class Visitor_IR {
                 }
             }
             return visitResult;
-        }
-    }
-
-    public void convertToI32(VisitResult visitResult) {
-        if (visitResult.irValue.getTypeOfValue().getBaseType() != BaseTypeEnum.INT) {
-            visitResult.irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), visitResult.irValue);
         }
     }
 
@@ -818,7 +787,7 @@ public class Visitor_IR {
             VisitResult tmp = visitLVal(primaryExp.lval);
             if (curTable.get(primaryExp.lval.ident) instanceof VarSym varSym) {
                 if (varSym.varType.isArray && primaryExp.lval.exp == null) {
-                    // 返回的是数组首元素的指针，可能用作函数参数，不需要Load
+                    // 返回的是数组首元素的指针，可能用作函数参数，不需要Load和其他操作
                 } else if (varSym.isConst && primaryExp.lval.exp != null) {
                     VisitResult a = visitExp(primaryExp.lval.exp);
                     if (a.constInt == null) {
@@ -953,5 +922,33 @@ public class Visitor_IR {
         ArrayList<Value> indexList = new ArrayList<>();
         indexList.add(ele);
         return indexList;
+    }
+
+    private void convertTo_I1_IcmpInstr(VisitResult tmp) {
+        if (tmp.irValue.getTypeOfValue().getBaseType() != BaseTypeEnum.BOOL) {
+            if (tmp.constInt != null) {
+                tmp.irValue = tmp.constInt == 0 ? new ImmValueBool(0) : new ImmValueBool(1);
+            } else {
+                tmp.irValue = curBlock.createICmpInstr(IcmpCondEnum.NE, tmp.irValue, new ImmValueI32(0));
+            }
+        }
+        curBlock.createBrInstr(null, null, tmp.irValue);
+    }
+
+    private void convertTypeBeforeStore(Value ptr, Value value) {
+        if (ptr.getTypeOfValue().getBaseType() != value.getTypeOfValue().getBaseType()) {
+            if (ptr.getTypeOfValue().getBaseType() == BaseTypeEnum.INT) {
+                value = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), value);
+            } else {
+                value = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), value);
+            }
+        }
+        curBlock.createStoreInstr(value, ptr);
+    }
+
+    public void convertToI32IfNot(VisitResult visitResult) {
+        if (visitResult.irValue.getTypeOfValue().getBaseType() != BaseTypeEnum.INT) {
+            visitResult.irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), visitResult.irValue);
+        }
     }
 }

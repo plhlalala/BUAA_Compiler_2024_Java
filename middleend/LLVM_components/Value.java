@@ -29,6 +29,10 @@ public abstract class Value {
         return name;
     }
 
+    public boolean nameIsNull() {
+        return name == null;
+    }
+
     public void setName(String name) {
         this.name = name;
     }
