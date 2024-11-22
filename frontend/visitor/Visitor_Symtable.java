@@ -224,24 +224,20 @@ public class Visitor_Symtable {
         }
     }
 
-    public VisitResult visitConstInitVal(ConstInitVal constInitVal) {
-        VisitResult visitResult = new VisitResult();
+    public void visitConstInitVal(ConstInitVal constInitVal) {
         if (constInitVal.constExps != null) {
             for (ConstExp constExp : constInitVal.constExps) {
                 visitConstExp(constExp);
             }
         }
-        return visitResult;
     }
 
-    public VisitResult visitInitVal(InitVal initVal) {
-        VisitResult visitResult = new VisitResult();
+    public void visitInitVal(InitVal initVal) {
         if (initVal.exps != null) {
             for (Exp exp : initVal.exps) {
                 visitExp(exp);
             }
         }
-        return visitResult;
     }
 
     public VisitResult visitBlock(Block block) {

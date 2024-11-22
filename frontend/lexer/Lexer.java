@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Lexer {
-    private static final HashMap<String, LexType> reservedWords = new HashMap<String, LexType>() {{
+    private static final HashMap<String, LexType> reservedWords = new HashMap<>() {{
         put("main", LexType.MAINTK);
         put("const", LexType.CONSTTK);
         put("int", LexType.INTTK);
@@ -25,7 +25,7 @@ public class Lexer {
         put("return", LexType.RETURNTK);
         put("void", LexType.VOIDTK);
     }};
-    private static final HashMap<String, LexType> doubleCharOperators = new HashMap<String, LexType>() {{
+    private static final HashMap<String, LexType> doubleCharOperators = new HashMap<>() {{
         put("&&", LexType.AND);
         put("||", LexType.OR);
         put("<=", LexType.LEQ);
@@ -33,7 +33,7 @@ public class Lexer {
         put("==", LexType.EQL);
         put("!=", LexType.NEQ);
     }};
-    private static final HashMap<Character, LexType> singleCharTokens = new HashMap<Character, LexType>() {{
+    private static final HashMap<Character, LexType> singleCharTokens = new HashMap<>() {{
         put('+', LexType.PLUS);
         put('-', LexType.MINU);
         put('*', LexType.MULT);
@@ -55,7 +55,7 @@ public class Lexer {
     private final PushbackReader reader;
     private int lineNum;
     private Token token;
-    private ArrayList<ErrorRecord> errorRecords;
+    private final ArrayList<ErrorRecord> errorRecords;
 
     public Lexer(PushbackReader reader, ArrayList<ErrorRecord> errorRecords) {
         this.reader = reader;
@@ -199,39 +199,26 @@ public class Lexer {
         return this.token;
     }
 
-    public int getLineNum() {
-        return this.lineNum;
-    }
-
     public void addErrorRecord(ErrorType errorType, int lineNumber) {
         errorRecords.add(new ErrorRecord(errorType, lineNumber));
     }
 
     public static char processEscapeSequence(char ch) {
-        switch (ch) {
-            case 'a':
-                return '\u0007';  // 响铃
-            case 'b':
-                return '\b';      // 退格
-            case 't':
-                return '\t';      // 制表符
-            case 'n':
-                return '\n';      // 换行
-            case 'v':
-                return '\u000B';  // 垂直制表符
-            case 'f':
-                return '\f';      // 换页
-            case '\"':
-                return '\"';     // 双引号
-            case '\'':
-                return '\'';     // 单引号
-            case '\\':
-                return '\\';     // 反斜杠
-            case '0':
-                return '\0';      // 空字符
-            default:
+        return switch (ch) {
+            case 'a' -> '\u0007';  // 响铃
+            case 'b' -> '\b';      // 退格
+            case 't' -> '\t';      // 制表符
+            case 'n' -> '\n';      // 换行
+            case 'v' -> '\u000B';  // 垂直制表符
+            case 'f' -> '\f';      // 换页
+            case '\"' -> '\"';     // 双引号
+            case '\'' -> '\'';     // 单引号
+            case '\\' -> '\\';     // 反斜杠
+            case '0' -> '\0';      // 空字符
+            default -> {
                 System.out.println("Error: Invalid escape sequence");
-                return ch;
-        }
+                yield ch;
+            }
+        };
     }
 }

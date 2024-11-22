@@ -848,17 +848,9 @@ public class Parser {
                 (currentToken.isBtype() && nextToken.isMatch(LexType.IDENFR) && nextnextToken.isNotMatch(LexType.LPARENT));
     }
 
-    private boolean subErrorList(int len) {
-        if (errorRecords.size() < len) {
-            return false;
-        } else if (errorRecords.size() == len) {
-            return true;
-
-        } else {
-            while (errorRecords.size() > len) {
-                errorRecords.remove(errorRecords.size() - 1);
-            }
-            return true;
+    private void subErrorList(int len) {
+        while (errorRecords.size() > len) {
+            errorRecords.remove(errorRecords.size() - 1);
         }
     }
 }
