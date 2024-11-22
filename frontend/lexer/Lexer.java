@@ -142,26 +142,30 @@ public class Lexer {
             token = new Token(value, LexType.INTCON, lineNum);
             return true;
         } else if (ch == '\'') {
+            sb = new StringBuilder();
             ch = reader.read();
-            if (ch == '\\') {  // 处理转义字符，可能还要加错误处理
-                sb.append((char) ch);
+            if (ch == '\\') {  // 处理转义字符
                 ch = reader.read();
+                ch = processEscapeSequence((char) ch);
             }
             sb.append((char) ch);
             ch = reader.read();
             if (ch == '\'') {
-                sb.append((char) ch);
                 value = sb.toString();
                 token = new Token(value, LexType.CHRCON, lineNum);
                 return true;
             }
         } else if (ch == '\"') {
+            sb = new StringBuilder();
             ch = reader.read();
             while (ch != '\"') {
+                if (ch == '\\') {
+                    ch = reader.read();
+                    ch = processEscapeSequence((char) ch);
+                }
                 sb.append((char) ch);
                 ch = reader.read();
             }
-            sb.append((char) ch);
             value = sb.toString();
             token = new Token(value, LexType.STRCON, lineNum);
             return true;
@@ -201,5 +205,33 @@ public class Lexer {
 
     public void addErrorRecord(ErrorType errorType, int lineNumber) {
         errorRecords.add(new ErrorRecord(errorType, lineNumber));
+    }
+
+    public static char processEscapeSequence(char ch) {
+        switch (ch) {
+            case 'a':
+                return '\u0007';  // 响铃
+            case 'b':
+                return '\b';      // 退格
+            case 't':
+                return '\t';      // 制表符
+            case 'n':
+                return '\n';      // 换行
+            case 'v':
+                return '\u000B';  // 垂直制表符
+            case 'f':
+                return '\f';      // 换页
+            case '\"':
+                return '\"';     // 双引号
+            case '\'':
+                return '\'';     // 单引号
+            case '\\':
+                return '\\';     // 反斜杠
+            case '0':
+                return '\0';      // 空字符
+            default:
+                System.out.println("Error: Invalid escape sequence");
+                return ch;
+        }
     }
 }

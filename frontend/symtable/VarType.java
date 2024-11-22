@@ -6,3 +6,5 @@ public class VarType {
     public boolean isArray;
     public LexType type;
 }
+
+

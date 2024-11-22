@@ -1,8 +1,6 @@
-int main() {
-    a
-    a[2+b] = 10
-    a[2] = 10
-    a = 10
-    a = getint()
+int main(){
+int a= 1;
+if(!'a') {a =10;}
+
     return 0;
 }

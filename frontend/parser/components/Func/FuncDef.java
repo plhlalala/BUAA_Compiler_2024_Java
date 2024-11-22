@@ -11,7 +11,7 @@ import java.io.PrintWriter;
 public class FuncDef {
     public FuncType funcType;
     public String ident;
-    public FuncFParams funcFParams;
+    public FuncFParams funcFParams; // 无函数参数为NULL
     public Block block;
     public boolean hasRightParen;
     public int identLinenum = -1;

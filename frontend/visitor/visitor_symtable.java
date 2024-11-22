@@ -49,19 +49,21 @@ import frontend.symtable.VarSym;
 import frontend.symtable.VarType;
 
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 // 语义分析错误类型： b c d e f g h l m
 // 统一遵循符号表的切换在进入新作用域前进行
-public class Visitor {
+public class Visitor_Symtable {
     public ArrayList<ErrorRecord> errorRecords;
     public SymTable symTable = new SymTable();
     public SymTable curTable = symTable;
     public int loopLevel = 0;
-    public ArrayList<SymTable> globalTable = new ArrayList<>();
+    public ArrayList<SymTable> AllTable = new ArrayList<>();
 
-    public Visitor(ArrayList<ErrorRecord> er) {
+    public Visitor_Symtable(ArrayList<ErrorRecord> er) {
         errorRecords = er;
-        globalTable.add(symTable);
+        AllTable.add(symTable);
     }
 
     private static boolean isHasError(VisitResult tmp, FuncSym funcSym, int paramNum) {
@@ -92,7 +94,7 @@ public class Visitor {
 
     public void visitMainFuncDef(MainFuncDef mainFuncDef) {
         curTable = curTable.createChild(); // 进入main函数作用域,切换到新的符号表
-        globalTable.add(curTable);
+        AllTable.add(curTable);
         VisitResult visitResult = visitBlock(mainFuncDef.block);
         if (!visitResult.hasReturnInLastSentence) {
             errorRecords.add(new ErrorRecord(ErrorType.MISSING_RETURN, mainFuncDef.linenum));
@@ -105,7 +107,7 @@ public class Visitor {
         if (curTable.contain(ident)) {
             errorRecords.add(new ErrorRecord(ErrorType.NAME_REDEFINED, funcDef.identLinenum));
             curTable = curTable.createChild(); // 进入函数作用域,切换到新的符号表
-            globalTable.add(curTable);
+            AllTable.add(curTable);
             if (funcDef.funcFParams != null && funcDef.funcFParams.FParams != null) {
                 visitFuncFParams(funcDef.funcFParams);
             }
@@ -113,14 +115,7 @@ public class Visitor {
                 visitBlock(funcDef.block);
             }
             VisitResult visitResult = funcDef.block == null ? new VisitResult() : visitBlock(funcDef.block);
-            if (funcDef.funcType.type == LexType.VOIDTK && !visitResult.returnNotVoidLineNumber.isEmpty()) {
-                for (int linenum : visitResult.returnNotVoidLineNumber) {
-                    errorRecords.add(new ErrorRecord(ErrorType.VOID_RETURN_MISMATCH, linenum));
-                }
-            }
-            if (funcDef.funcType.type != LexType.VOIDTK && !visitResult.hasReturnInLastSentence) {
-                errorRecords.add(new ErrorRecord(ErrorType.MISSING_RETURN, funcDef.blockLinenum));
-            }
+            judgeFuncReturnResultErrorAndRecord(funcDef, visitResult);
 
         } else {
             FuncSym funcSym = new FuncSym();
@@ -128,23 +123,26 @@ public class Visitor {
             funcSym.retType = funcDef.funcType.type;
             curTable.add(funcSym);
             curTable = curTable.createChild(); // 进入函数作用域,切换到新的符号表
-            globalTable.add(curTable);
+            AllTable.add(curTable);
             if (funcDef.funcFParams != null && funcDef.funcFParams.FParams != null) {
                 VisitResult tmp = visitFuncFParams(funcDef.funcFParams);
                 funcSym.paramTypeList.addAll(tmp.paraTypeList);
             }
-            curTable.parent.add(funcSym);
             VisitResult visitResult = (funcDef.block == null) ? new VisitResult() : visitBlock(funcDef.block);
-            if (funcDef.funcType.type == LexType.VOIDTK && !visitResult.returnNotVoidLineNumber.isEmpty()) {
-                for (int linenum : visitResult.returnNotVoidLineNumber) {
-                    errorRecords.add(new ErrorRecord(ErrorType.VOID_RETURN_MISMATCH, linenum));
-                }
-            }
-            if (funcDef.funcType.type != LexType.VOIDTK && !visitResult.hasReturnInLastSentence) {
-                errorRecords.add(new ErrorRecord(ErrorType.MISSING_RETURN, funcDef.blockLinenum));
-            }
+            judgeFuncReturnResultErrorAndRecord(funcDef, visitResult);
         }
         curTable = curTable.parent;
+    }
+
+    private void judgeFuncReturnResultErrorAndRecord(FuncDef funcDef, VisitResult visitResult) {
+        if (funcDef.funcType.type == LexType.VOIDTK && !visitResult.returnNotVoidLineNumber.isEmpty()) {
+            for (int linenum : visitResult.returnNotVoidLineNumber) {
+                errorRecords.add(new ErrorRecord(ErrorType.VOID_RETURN_MISMATCH, linenum));
+            }
+        }
+        if (funcDef.funcType.type != LexType.VOIDTK && !visitResult.hasReturnInLastSentence) {
+            errorRecords.add(new ErrorRecord(ErrorType.MISSING_RETURN, funcDef.blockLinenum));
+        }
     }
 
     public void visitDecl(Decl decl) {
@@ -274,7 +272,7 @@ public class Visitor {
             return visitAssignLval_stmt((AssignLval_stmt) stmt);
         } else if (stmt instanceof Block_stmt) {
             curTable = curTable.createChild();
-            globalTable.add(curTable);
+            AllTable.add(curTable);
             VisitResult visitResult = visitBlock(((Block_stmt) stmt).block);
             curTable = curTable.parent;
             return visitResult;
@@ -325,14 +323,14 @@ public class Visitor {
                 }
             }
             int len = ((Print_stmt) stmt).exps == null ? 0 : ((Print_stmt) stmt).exps.size();
-            int realLen = ((Print_stmt) stmt).stringConst.split("%d|%c").length - 1;
+            int realLen = countFormatSpecifiers(((Print_stmt) stmt).stringConst);
             if (len != realLen) {
                 errorRecords.add(new ErrorRecord(ErrorType.PRINTF_MISMATCH, ((Print_stmt) stmt).linenum));
             }
         } else if (stmt instanceof Return_stmt) {
             VisitResult visitResult = new VisitResult();
             if (((Return_stmt) stmt).exp != null) {
-                VisitResult tmp = visitExp(((Return_stmt) stmt).exp);
+                visitExp(((Return_stmt) stmt).exp);
                 visitResult.returnNotVoidLineNumber.add(((Return_stmt) stmt).linenum);
             }
             return visitResult;
@@ -341,6 +339,21 @@ public class Visitor {
         }
         return new VisitResult();
     }
+
+
+    public static int countFormatSpecifiers(String formatString) {
+        // 定义正则表达式，匹配 %d 或 %c
+        String regex = "%[dc]";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(formatString);
+
+        int count = 0;
+        while (matcher.find()) {
+            count++;
+        }
+        return count;
+    }
+
 
     public void visitForStmt(ForStmt forStmt) {
         visitLVal(forStmt.lval);
@@ -365,8 +378,8 @@ public class Visitor {
         if (varSym != null && varSym.isConst) {
             errorRecords.add(new ErrorRecord(ErrorType.MODIFY_CONSTANT, assignLval_stmt.linenum));
         }
-        VisitResult tmp = visitLVal(assignLval_stmt.lval);
-        VisitResult tmp2 = visitExp(assignLval_stmt.exp);
+        visitLVal(assignLval_stmt.lval);
+        visitExp(assignLval_stmt.exp);
         return visitResult;
     }
 
@@ -401,7 +414,7 @@ public class Visitor {
     public VisitResult visitAddExp(AddExp addExp) {
         VisitResult visitResult = new VisitResult();
         if (addExp.addExp != null) {
-            VisitResult tmp = visitAddExp(addExp.addExp);
+            visitAddExp(addExp.addExp);
         }
         VisitResult tmp = visitMulExp(addExp.mulExp);
         visitResult.varType = tmp.varType;
@@ -411,7 +424,7 @@ public class Visitor {
     public VisitResult visitMulExp(MulExp mulExp) {
         VisitResult visitResult = new VisitResult();
         if (mulExp.mulExp != null) {
-            VisitResult tmp = visitMulExp(mulExp.mulExp);
+            visitMulExp(mulExp.mulExp);
         }
         VisitResult tmp = visitUnaryExp(mulExp.unaryExp);
         visitResult.varType = tmp.varType;
@@ -437,7 +450,10 @@ public class Visitor {
                 int realParamNum = unaryExp.funcRParams == null ? 0 : unaryExp.funcRParams.exps.size();
                 if (paramNum != realParamNum) {
                     errorRecords.add(new ErrorRecord(ErrorType.PARAMETER_COUNT_MISMATCH, unaryExp.linenum));
-                    return visitFuncRParams(unaryExp.funcRParams);
+                    if (unaryExp.funcRParams != null) {
+                        return visitFuncRParams(unaryExp.funcRParams);
+                    }
+                    return new VisitResult();
                 }
                 // 传递数组给变量。传递变量给数组。传递 char 型数组给 int 型数组。传递 int 型数组给 char 型数组。
                 if (unaryExp.funcRParams != null) {
@@ -484,7 +500,7 @@ public class Visitor {
             visitResult.varType.type = ((VarSym) varSym).varType.type; // int or char
             if (lval.exp != null) {
                 visitResult.varType.isArray = false;
-                VisitResult tmp = visitExp(lval.exp);
+                visitExp(lval.exp);
             } else {
                 visitResult.varType.isArray = ((VarSym) varSym).varType.isArray;
             }
