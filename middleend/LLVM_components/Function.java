@@ -1,5 +1,6 @@
 package middleend.LLVM_components;
 
+import middleend.instruction.AllocaInstr;
 import middleend.type.BaseTypeEnum;
 import middleend.type.BasicType;
 import middleend.type.LLVMType;
@@ -8,7 +9,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Function extends Value {
+public class Function extends IrValue {
     //declare i32 @getint()
     //declare i32 @getchar()
     //declare void @putint(i32)
@@ -50,6 +51,14 @@ public class Function extends Value {
 
     public ArrayList<BasicBlock> getBasicBlocks() {
         return basicBlocks;
+    }
+
+    public ArrayList<AllocaInstr> getAllocaInstrs() {
+        ArrayList<AllocaInstr> allocaInstrs = new ArrayList<>();
+        for (BasicBlock basicBlock : basicBlocks) {
+            allocaInstrs.addAll(basicBlock.getAllocaInstrs());
+        }
+        return allocaInstrs;
     }
 
     public BasicBlock createBasicBlock() {

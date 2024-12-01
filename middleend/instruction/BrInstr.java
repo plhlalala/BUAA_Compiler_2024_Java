@@ -1,7 +1,7 @@
 package middleend.instruction;
 
 import middleend.LLVM_components.BasicBlock;
-import middleend.LLVM_components.Value;
+import middleend.LLVM_components.IrValue;
 import middleend.type.BaseTypeEnum;
 import middleend.type.BasicType;
 
@@ -9,7 +9,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public class BrInstr extends Instruction {
-    private Value cond;
+    private IrValue cond;
     private BasicBlock trueBranch;
     private BasicBlock falseBranch;
     private BasicBlock dest;
@@ -22,7 +22,7 @@ public class BrInstr extends Instruction {
         this.falseBranch = null;
     }
 
-    public BrInstr(Value cond, BasicBlock ifTrue, BasicBlock ifFalse, BasicBlock parentBasicBlock) {
+    public BrInstr(IrValue cond, BasicBlock ifTrue, BasicBlock ifFalse, BasicBlock parentBasicBlock) {
         super(new BasicType(BaseTypeEnum.VOID, 0), new ArrayList<>(), parentBasicBlock);
         super.addOperand(cond);
         this.cond = cond;
@@ -40,11 +40,19 @@ public class BrInstr extends Instruction {
         }
     }
 
-    public Value getCond() {
+    public String dumpToString() {
+        if (dest != null) {
+            return String.format("br label %%%s", dest.getName());
+        } else {
+            return String.format("br %s, label %%%s, label %%%s", cond.toString(), trueBranch.getName(), falseBranch.getName());
+        }
+    }
+
+    public IrValue getCond() {
         return cond;
     }
 
-    public void setCond(Value cond) {
+    public void setCond(IrValue cond) {
         this.cond = cond;
     }
 

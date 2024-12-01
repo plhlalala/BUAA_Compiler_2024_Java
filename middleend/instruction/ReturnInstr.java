@@ -1,7 +1,7 @@
 package middleend.instruction;
 
 import middleend.LLVM_components.BasicBlock;
-import middleend.LLVM_components.Value;
+import middleend.LLVM_components.IrValue;
 import middleend.type.BaseTypeEnum;
 import middleend.type.BasicType;
 
@@ -9,24 +9,36 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public class ReturnInstr extends Instruction {
-    private Value value;
+    private IrValue irValue;
 
-    public ReturnInstr(Value value, BasicBlock parentBasicBlock) {
-        super(value.getTypeOfValue().getTypeClone(), new ArrayList<>(), parentBasicBlock);
-        this.value = value;
-        super.addOperand(value);
+    public ReturnInstr(IrValue irValue, BasicBlock parentBasicBlock) {
+        super(irValue.getTypeOfValue().getTypeClone(), new ArrayList<>(), parentBasicBlock);
+        this.irValue = irValue;
+        super.addOperand(irValue);
     }
 
     public ReturnInstr(BasicBlock parentBasicBlock) {
         super(new BasicType(BaseTypeEnum.VOID, 0), new ArrayList<>(), parentBasicBlock);
-        this.value = null;
+        this.irValue = null;
     }
 
     public void dump(PrintWriter writer) {
         if (this.getTypeOfValue().getBaseType() != BaseTypeEnum.VOID) {
-            writer.printf("  ret %s %s\n", getTypeOfValue().toString(), value.getName());
+            writer.printf("  ret %s %s\n", getTypeOfValue().toString(), irValue.getName());
         } else {
             writer.printf("  ret void\n");
         }
+    }
+
+    public String dumpToString() {
+        if (this.getTypeOfValue().getBaseType() != BaseTypeEnum.VOID) {
+            return String.format("ret %s %s", getTypeOfValue().toString(), irValue.getName());
+        } else {
+            return "ret void";
+        }
+    }
+
+    public IrValue getReturn() {
+        return irValue;
     }
 }

@@ -1,17 +1,17 @@
 package middleend.instruction;
 
 import middleend.LLVM_components.BasicBlock;
-import middleend.LLVM_components.Value;
+import middleend.LLVM_components.IrValue;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public class BinaryInstr extends Instruction {
     private BinaryOp op;
-    private Value left;
-    private Value right;
+    private IrValue left;
+    private IrValue right;
 
-    public BinaryInstr(BinaryOp op, Value left, Value right, BasicBlock parentBasicBlock) {
+    public BinaryInstr(BinaryOp op, IrValue left, IrValue right, BasicBlock parentBasicBlock) {
         super(left.getTypeOfValue(), new ArrayList<>(), parentBasicBlock);
         this.op = op;
         this.left = left;
@@ -24,16 +24,21 @@ public class BinaryInstr extends Instruction {
         return op;
     }
 
-    public Value getLeft() {
+    public IrValue getLeft() {
         return left;
     }
 
-    public Value getRight() {
+    public IrValue getRight() {
         return right;
     }
 
     public void dump(PrintWriter writer) {
         writer.printf("  %s = %s %s %s, %s\n", this.getName(),
+                op.toString().toLowerCase(), getTypeOfValue().toString(), left.getName(), right.getName());
+    }
+
+    public String dumpToString() {
+        return String.format("%s = %s %s %s, %s", this.getName(),
                 op.toString().toLowerCase(), getTypeOfValue().toString(), left.getName(), right.getName());
     }
 }

@@ -32,7 +32,7 @@ public class ArrayType extends LLVMType {
     }
 
     @Override
-    public String initValuesToString(ArrayList<Integer> initVals) {
+    public String initValuesToString(ArrayList<Integer> initVals) { //未初始化的部分自动补全为0，但不会存储在initVals中
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(arraysize).append(" x ").append(basicType.toString()).append("] ");
         if (isAllZero(initVals)) {

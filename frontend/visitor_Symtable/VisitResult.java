@@ -1,8 +1,8 @@
-package frontend.visitor;
+package frontend.visitor_Symtable;
 
 import frontend.symtable.VarType;
 import middleend.LLVM_components.BasicBlock;
-import middleend.LLVM_components.Value;
+import middleend.LLVM_components.IrValue;
 
 import java.util.ArrayList;
 
@@ -14,8 +14,8 @@ public class VisitResult {
     public Integer constInt;
     public ArrayList<Integer> integerList = new ArrayList<>();
 
-    public Value irValue;
-    public ArrayList<Value> irValueList = new ArrayList<>();
+    public IrValue irValue;
+    public ArrayList<IrValue> irIrValueList = new ArrayList<>();
 
     public boolean hasReturnInLastSentence = false;
     public ArrayList<Integer> returnNotVoidLineNumber = new ArrayList<>();

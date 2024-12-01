@@ -4,16 +4,16 @@ import middleend.type.LLVMType;
 
 import java.util.ArrayList;
 
-public abstract class Value {
-    private LLVMType type;
+public abstract class IrValue {
+    private final LLVMType type;
+    private final ArrayList<Use> useList = new ArrayList<>();
     private String name;
-    private ArrayList<Use> useList = new ArrayList<>();
 
-    public Value(LLVMType type) {
+    public IrValue(LLVMType type) {
         this.type = type;
     }
 
-    public Value(LLVMType type, String name) {
+    public IrValue(LLVMType type, String name) {
         this.type = type;
         this.name = name;
     }
@@ -29,12 +29,12 @@ public abstract class Value {
         return name;
     }
 
-    public boolean nameIsNull() {
-        return name == null;
-    }
-
     public void setName(String name) {
         this.name = name;
+    }
+
+    public boolean nameIsNull() {
+        return name == null;
     }
 
     public void addUse(User user, int pos) {

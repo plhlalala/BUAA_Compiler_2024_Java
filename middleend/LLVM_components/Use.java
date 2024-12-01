@@ -2,12 +2,12 @@ package middleend.LLVM_components;
 
 public class Use {
     private User user;
-    private Value value;
+    private IrValue irValue;
     private int pos;
 
-    public Use(User user, Value value, int pos) {
+    public Use(User user, IrValue irValue, int pos) {
         this.user = user;
-        this.value = value;
+        this.irValue = irValue;
         this.pos = pos;
     }
 
@@ -19,12 +19,12 @@ public class Use {
         this.user = user;
     }
 
-    public Value getValue() {
-        return value;
+    public IrValue getValue() {
+        return irValue;
     }
 
-    public void setValue(Value value) {
-        this.value = value;
+    public void setValue(IrValue irValue) {
+        this.irValue = irValue;
     }
 
     public int getPos() {

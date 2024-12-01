@@ -1,8 +1,8 @@
 package middleend.instruction;
 
 import middleend.LLVM_components.BasicBlock;
+import middleend.LLVM_components.IrValue;
 import middleend.LLVM_components.User;
-import middleend.LLVM_components.Value;
 import middleend.type.LLVMType;
 
 import java.io.PrintWriter;
@@ -11,13 +11,13 @@ import java.util.ArrayList;
 public abstract class Instruction extends User {
     private BasicBlock parentBasicBlock;
 
-    public Instruction(LLVMType type, ArrayList<Value> operands, BasicBlock parentBasicBlock) {
+    public Instruction(LLVMType type, ArrayList<IrValue> operands, BasicBlock parentBasicBlock) {
         super(type, operands);
         this.parentBasicBlock = parentBasicBlock;
     }
 
-    public void addOperands(ArrayList<Value> operands) {
-        for (Value operand : operands) {
+    public void addOperands(ArrayList<IrValue> operands) {
+        for (IrValue operand : operands) {
             super.addOperand(operand);
         }
     }
@@ -37,5 +37,9 @@ public abstract class Instruction extends User {
 
     public void dump(PrintWriter writer) {
 
+    }
+
+    public String dumpToString() {
+        return "instruction";
     }
 }

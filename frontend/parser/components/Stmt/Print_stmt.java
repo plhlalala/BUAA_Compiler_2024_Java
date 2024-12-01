@@ -13,25 +13,6 @@ public class Print_stmt extends Stmt {
     public boolean hasSemicolon;
     public int linenum = -1;
 
-    @Override
-    public void analyze(PrintWriter writer) {
-        writer.println(LexType.PRINTFTK);
-        writer.println(LexType.LPARENT);
-        assert stringConst != null;
-        writer.println(LexType.STRCON.getTypename() + " " + "\"" + reverseEscapeSequence(stringConst) + "\"");
-        for (Exp exp : exps) {
-            writer.println(LexType.COMMA);
-            exp.analyze(writer);
-        }
-        if (hasRightParen) {
-            writer.println(LexType.RPARENT);
-        }
-        if (hasSemicolon) {
-            writer.println(LexType.SEMICN);
-        }
-        writer.println(this);
-    }
-
     public static String reverseEscapeSequence(char ch) {
         switch (ch) {
             case '\u0007':
@@ -68,5 +49,24 @@ public class Print_stmt extends Stmt {
             sb.append(reverseEscapeSequence(ch));
         }
         return sb.toString();
+    }
+
+    @Override
+    public void analyze(PrintWriter writer) {
+        writer.println(LexType.PRINTFTK);
+        writer.println(LexType.LPARENT);
+        assert stringConst != null;
+        writer.println(LexType.STRCON.getTypename() + " " + "\"" + reverseEscapeSequence(stringConst) + "\"");
+        for (Exp exp : exps) {
+            writer.println(LexType.COMMA);
+            exp.analyze(writer);
+        }
+        if (hasRightParen) {
+            writer.println(LexType.RPARENT);
+        }
+        if (hasSemicolon) {
+            writer.println(LexType.SEMICN);
+        }
+        writer.println(this);
     }
 }

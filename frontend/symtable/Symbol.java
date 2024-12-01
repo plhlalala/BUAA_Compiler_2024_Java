@@ -1,9 +1,9 @@
 package frontend.symtable;
 
-import middleend.LLVM_components.Value;
+import middleend.LLVM_components.IrValue;
 
 public abstract class Symbol {
     public String ident;
     public SymTable table;
-    public Value irValue;
+    public IrValue irValue;
 }

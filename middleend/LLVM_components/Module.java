@@ -7,8 +7,8 @@ import middleend.type.LLVMType;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
-public class Module extends Value {
-    private final ArrayList<GlobalValue> globalVariables;
+public class Module extends IrValue {
+    private final ArrayList<GlobalIrValue> globalVariables;
     private final ArrayList<Function> functions;
     private Function mainFunction;
 
@@ -19,13 +19,25 @@ public class Module extends Value {
         mainFunction = null;
     }
 
-    public Value createGlobalValue(LLVMType type, ArrayList<Integer> initVals) {
-        GlobalValue globalValue = new GlobalValue(type, initVals);
+    public ArrayList<GlobalIrValue> getGlobalVariables() {
+        return globalVariables;
+    }
+
+    public ArrayList<Function> getFunctions() {
+        return functions;
+    }
+
+    public Function getMainFunction() {
+        return mainFunction;
+    }
+
+    public IrValue createGlobalValue(LLVMType type, ArrayList<Integer> initVals) {
+        GlobalIrValue globalValue = new GlobalIrValue(type, initVals);
         globalVariables.add(globalValue);
         return globalValue;
     }
 
-    public Value createFunction(LLVMType returnType, ArrayList<LLVMType> params, String name) {
+    public IrValue createFunction(LLVMType returnType, ArrayList<LLVMType> params, String name) {
         ArrayList<FunctionParam> functionParams = new ArrayList<>();
         for (LLVMType param : params) {
             functionParams.add(new FunctionParam(param));
@@ -35,7 +47,7 @@ public class Module extends Value {
         return function;
     }
 
-    public Value createMainFunc() {
+    public IrValue createMainFunc() {
         Function function = new Function(new BasicType(BaseTypeEnum.INT, 0), new ArrayList<>(), "main");
         mainFunction = function;
         return function;
@@ -49,7 +61,7 @@ public class Module extends Value {
         writer.println("declare void @putstr(i8*)");
         writer.println();
 
-        for (GlobalValue globalValue : globalVariables) {
+        for (GlobalIrValue globalValue : globalVariables) {
             globalValue.dump(writer);
         }
         writer.println();

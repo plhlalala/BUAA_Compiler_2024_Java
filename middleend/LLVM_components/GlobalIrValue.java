@@ -5,11 +5,11 @@ import middleend.type.LLVMType;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
-public class GlobalValue extends Value {
+public class GlobalIrValue extends IrValue {
     private final ArrayList<Integer> initVals = new ArrayList<>();
     private LLVMType type;
 
-    public GlobalValue(LLVMType type, ArrayList<Integer> initVals) {
+    public GlobalIrValue(LLVMType type, ArrayList<Integer> initVals) {
         super(type.getTypeClone().addPtr());
         this.type = type;
         this.initVals.addAll(initVals);
@@ -22,5 +22,9 @@ public class GlobalValue extends Value {
 
     public void dump(PrintWriter writer) {
         writer.printf("%s = dso_local global %s\n", getName(), type.initValuesToString(initVals));
+    }
+
+    public ArrayList<Integer> getInitVals() {
+        return initVals;
     }
 }

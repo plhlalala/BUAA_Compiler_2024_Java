@@ -1,10 +1,11 @@
+import backend.Generator;
 import frontend.error.ErrorRecord;
 import frontend.lexer.Lexer;
 import frontend.parser.Parser;
 import frontend.parser.components.CompUnit;
 import frontend.symtable.SymTable;
 import frontend.symtable.Symbol;
-import frontend.visitor.Visitor_Symtable;
+import frontend.visitor_Symtable.Visitor_Symtable;
 import middleend.LLVM_components.Module;
 import middleend.Visitor_IR;
 
@@ -24,12 +25,14 @@ public class Compiler {
         String errorOutputPath = "error.txt";   // 错误输出文件
         String symbolOutputPath = "symbol.txt";   // 符号表输出文件
         String llvmOutputPath = "llvm_ir.txt";   // 生成的LLVM IR文件
+        String mipsOutputPath = "mips.txt";   // 生成的MIPS汇编文件
 
         try (PushbackReader reader = new PushbackReader(new FileReader(inputFilePath));
              PrintWriter outputWriter = new PrintWriter(new FileWriter(lexerOutputPath));
              PrintWriter errorWriter = new PrintWriter(new FileWriter(errorOutputPath));
              PrintWriter symbolWriter = new PrintWriter(new FileWriter(symbolOutputPath));
-             PrintWriter llvmWriter = new PrintWriter(new FileWriter(llvmOutputPath))) {
+             PrintWriter llvmWriter = new PrintWriter(new FileWriter(llvmOutputPath));
+             PrintWriter mipsWriter = new PrintWriter(new FileWriter(mipsOutputPath))) {
 
             ArrayList<ErrorRecord> lexerErrorRecords = new ArrayList<>();
             ArrayList<ErrorRecord> parserErrorRecords = new ArrayList<>();
@@ -46,6 +49,7 @@ public class Compiler {
 
             Visitor_Symtable visitor = new Visitor_Symtable(visitorErrorRecords);
             visitor.visitCompUnit(compUnit);
+
             errorRecords.addAll(lexerErrorRecords);
             errorRecords.addAll(parserErrorRecords);
             errorRecords.addAll(visitorErrorRecords);
@@ -64,7 +68,11 @@ public class Compiler {
                 irVisitor.visitCompUnit(compUnit);
                 Module module = irVisitor.module;
                 module.dump(llvmWriter);
+                Generator generator = new Generator();
+                generator.generate(module);
+                generator.module.dump(mipsWriter);
             }
+
             visitor.AllTable.sort(Comparator.comparingInt(o -> o.id));
             for (SymTable table : visitor.AllTable) {
                 for (Symbol symbol : table.symbolList) {

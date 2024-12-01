@@ -6,8 +6,8 @@ import middleend.instruction.BinaryOp;
 import middleend.instruction.BrInstr;
 import middleend.instruction.CallInstr;
 import middleend.instruction.GetelementptrInstr;
-import middleend.instruction.IcmpCondEnum;
 import middleend.instruction.IcmpInstr;
+import middleend.instruction.IcmpOpEnum;
 import middleend.instruction.Instruction;
 import middleend.instruction.LoadInstr;
 import middleend.instruction.ReturnInstr;
@@ -21,7 +21,7 @@ import middleend.type.LLVMType;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
-public class BasicBlock extends Value {
+public class BasicBlock extends IrValue {
     private Function parentFunction;
     private ArrayList<Instruction> instructions;
     private int loopNum;
@@ -33,52 +33,52 @@ public class BasicBlock extends Value {
         loopNum = 0;
     }
 
-    public Value createAddInstr(Value left, Value right) {
+    public IrValue createAddInstr(IrValue left, IrValue right) {
         Instruction addInstr = new BinaryInstr(BinaryOp.ADD, left, right, this);
         this.instructions.add(addInstr);
         addInstr.setParentBasicBlock(this);
         return addInstr;
     }
 
-    public Value createSubInstr(Value left, Value right) {
+    public IrValue createSubInstr(IrValue left, IrValue right) {
         Instruction subInstr = new BinaryInstr(BinaryOp.SUB, left, right, this);
         this.instructions.add(subInstr);
         subInstr.setParentBasicBlock(this);
         return subInstr;
     }
 
-    public Value createMulInstr(Value left, Value right) {
+    public IrValue createMulInstr(IrValue left, IrValue right) {
         Instruction mulInstr = new BinaryInstr(BinaryOp.MUL, left, right, this);
         this.instructions.add(mulInstr);
         mulInstr.setParentBasicBlock(this);
         return mulInstr;
     }
 
-    public Value createSDivInstr(Value left, Value right) {
+    public IrValue createSDivInstr(IrValue left, IrValue right) {
         Instruction divInstr = new BinaryInstr(BinaryOp.SDIV, left, right, this);
         this.instructions.add(divInstr);
         divInstr.setParentBasicBlock(this);
         return divInstr;
     }
 
-    public Value createSRemInstr(Value left, Value right) {
+    public IrValue createSRemInstr(IrValue left, IrValue right) {
         Instruction remInstr = new BinaryInstr(BinaryOp.SREM, left, right, this);
         this.instructions.add(remInstr);
         remInstr.setParentBasicBlock(this);
         return remInstr;
     }
 
-    public Value createICmpInstr(IcmpCondEnum cond, Value left, Value right) {
+    public IrValue createICmpInstr(IcmpOpEnum cond, IrValue left, IrValue right) {
         Instruction icmpInstr = new IcmpInstr(cond, left, right, this);
         this.instructions.add(icmpInstr);
         icmpInstr.setParentBasicBlock(this);
         return icmpInstr;
     }
 
-    public Value createAllocatInstrInFront(LLVMType type) {
+    public IrValue createAllocatInstrInFront(LLVMType type) {
         Instruction allocaInstr = new AllocaInstr(type, this);
         allocaInstr.setParentBasicBlock(this);
-        if (instructions.size() == 0) {
+        if (instructions.isEmpty()) {
             instructions.add(allocaInstr);
         } else {
             for (int i = 0; i < instructions.size(); i++) {
@@ -97,69 +97,69 @@ public class BasicBlock extends Value {
         return allocaInstr;
     }
 
-    public Value createStoreInstr(Value value, Value ptr) {
-        Instruction storeInstr = new StoreInstr(value, ptr, this);
+    public IrValue createStoreInstr(IrValue irValue, IrValue ptr) {
+        Instruction storeInstr = new StoreInstr(irValue, ptr, this);
         this.instructions.add(storeInstr);
         storeInstr.setParentBasicBlock(this);
         return storeInstr;
     }
 
-    public Value createBrInstr(BasicBlock trueBranch, BasicBlock falseBranch, Value cond) {
+    public IrValue createBrInstr(BasicBlock trueBranch, BasicBlock falseBranch, IrValue cond) {
         Instruction brInstr = new BrInstr(cond, trueBranch, falseBranch, this);
         this.instructions.add(brInstr);
         brInstr.setParentBasicBlock(this);
         return brInstr;
     }
 
-    public Value createBrInstr(BasicBlock dest) {
+    public IrValue createBrInstr(BasicBlock dest) {
         Instruction brInstr = new BrInstr(dest, this);
         this.instructions.add(brInstr);
         brInstr.setParentBasicBlock(this);
         return brInstr;
     }
 
-    public Value createCallInstr(Function func, ArrayList<Value> args) {
+    public IrValue createCallInstr(Function func, ArrayList<IrValue> args) {
         Instruction callInstr = new CallInstr(func, args, this);
         this.instructions.add(callInstr);
         callInstr.setParentBasicBlock(this);
         return callInstr;
     }
 
-    public Value createGetElementPtrInstr(Value elementBase, ArrayList<Value> offsets) {
+    public IrValue createGetElementPtrInstr(IrValue elementBase, ArrayList<IrValue> offsets) {
         Instruction getelementptrInstr = new GetelementptrInstr(elementBase, offsets, this);
         this.instructions.add(getelementptrInstr);
         getelementptrInstr.setParentBasicBlock(this);
         return getelementptrInstr;
     }
 
-    public Value createLoadInstr(Value ptr) {
+    public IrValue createLoadInstr(IrValue ptr) {
         Instruction loadInstr = new LoadInstr(ptr, this);
         this.instructions.add(loadInstr);
         loadInstr.setParentBasicBlock(this);
         return loadInstr;
     }
 
-    public Value createReturnInstr(Value value) {
+    public IrValue createReturnInstr(IrValue irValue) {
         Instruction returnInstr;
-        if (value == null) {
+        if (irValue == null) {
             returnInstr = new ReturnInstr(this);
         } else {
-            returnInstr = new ReturnInstr(value, this);
+            returnInstr = new ReturnInstr(irValue, this);
         }
         this.instructions.add(returnInstr);
         returnInstr.setParentBasicBlock(this);
         return returnInstr;
     }
 
-    public Value createTruncInstr(LLVMType type, Value value) {
-        Instruction truncInstr = new TruncInstr(value, type, this);
+    public IrValue createTruncInstr(LLVMType type, IrValue irValue) {
+        Instruction truncInstr = new TruncInstr(irValue, type, this);
         this.instructions.add(truncInstr);
         truncInstr.setParentBasicBlock(this);
         return truncInstr;
     }
 
-    public Value createZextInstr(LLVMType type, Value value) {
-        Instruction zextInstr = new ZextInstr(value, type, this);
+    public IrValue createZextInstr(LLVMType type, IrValue irValue) {
+        Instruction zextInstr = new ZextInstr(irValue, type, this);
         this.instructions.add(zextInstr);
         zextInstr.setParentBasicBlock(this);
         return zextInstr;
@@ -184,10 +184,29 @@ public class BasicBlock extends Value {
             instr.dump(writer);
         }
 
-        if (this.instructions.size() == 0 ||
+        if (this.instructions.isEmpty() ||
                 !(getLastInstruction() instanceof BrInstr) && !(getLastInstruction() instanceof ReturnInstr)) {
+            this.instructions.add(new ReturnInstr(this));
             writer.println("  ret void");
         }
         writer.println("");
+    }
+
+    public ArrayList<AllocaInstr> getAllocaInstrs() {
+        ArrayList<AllocaInstr> allocaInstrs = new ArrayList<>();
+        for (Instruction instr : instructions) {
+            if (instr instanceof AllocaInstr) {
+                allocaInstrs.add((AllocaInstr) instr);
+            }
+        }
+        return allocaInstrs;
+    }
+
+    public ArrayList<Instruction> getInstructions() {
+        return instructions;
+    }
+
+    public String getMIPSLabelName() {
+        return this.parentFunction.getName() + "_" + this.getName();
     }
 }

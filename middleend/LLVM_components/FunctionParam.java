@@ -4,7 +4,7 @@ import middleend.type.LLVMType;
 
 import java.io.PrintWriter;
 
-public class FunctionParam extends Value {
+public class FunctionParam extends IrValue {
 
     public FunctionParam(LLVMType type) {
         super(type);

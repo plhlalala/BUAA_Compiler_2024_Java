@@ -7,16 +7,6 @@ import java.io.PrintWriter;
 public class Character_com {
     public String charConst;
 
-    public void analyze(PrintWriter writer) {
-        writer.println(LexType.CHRCON.getTypename() + " " + "\'" + reverseEscapeSequence(charConst.charAt(0)) + "\'");
-        writer.println(this);
-    }
-
-    @Override
-    public String toString() {
-        return "<Character>";
-    }
-
     public static String reverseEscapeSequence(char ch) {
         switch (ch) {
             case '\u0007':
@@ -45,6 +35,16 @@ public class Character_com {
                 // 如果不是标准转义字符，返回字符本身
                 return Character.toString(ch);
         }
+    }
+
+    public void analyze(PrintWriter writer) {
+        writer.println(LexType.CHRCON.getTypename() + " " + "\'" + reverseEscapeSequence(charConst.charAt(0)) + "\'");
+        writer.println(this);
+    }
+
+    @Override
+    public String toString() {
+        return "<Character>";
     }
 
 }

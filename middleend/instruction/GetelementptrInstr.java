@@ -1,7 +1,7 @@
 package middleend.instruction;
 
 import middleend.LLVM_components.BasicBlock;
-import middleend.LLVM_components.Value;
+import middleend.LLVM_components.IrValue;
 import middleend.type.ArrayType;
 import middleend.type.BasicType;
 import middleend.type.LLVMType;
@@ -10,25 +10,27 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public class GetelementptrInstr extends Instruction {
-    private Value elementBase;
-    private ArrayList<Value> offsets;
+    private IrValue basePtr;
+    private ArrayList<IrValue> offsets;
 
-    public GetelementptrInstr(Value elementBase, ArrayList<Value> offsets, BasicBlock parentbasicBlock) {
-        super(getGepType(elementBase, offsets), new ArrayList<>(), parentbasicBlock); // 类型是该地址对应的类型
-        this.elementBase = elementBase;
+    public GetelementptrInstr(IrValue basePtr, ArrayList<IrValue> offsets, BasicBlock parentbasicBlock) {
+        super(getGepType(basePtr, offsets), new ArrayList<>(), parentbasicBlock); // 类型是该地址对应的类型
+        this.basePtr = basePtr;
         this.offsets = offsets;
         super.addOperands(offsets);
-        super.addOperand(elementBase);
+        super.addOperand(basePtr);
     }
 
-    public static LLVMType getGepType(Value elementBase, ArrayList<Value> offsets) {
+    public static LLVMType getGepType(IrValue elementBase, ArrayList<IrValue> offsets) {
         if (elementBase.getTypeOfValue() instanceof BasicType basicType) {
             return basicType.getTypeClone();
+            // 从数组中的某个元素的地址开始（通常作为参数传入的是o号元素），再往后偏移，类型为类似i32*
         } else if (elementBase.getTypeOfValue() instanceof ArrayType arrayType) {
-            if (offsets.size() == 1) {
+            if (offsets.size() == 1) { //TODO 好像存在问题，貌似不会这样传入参数
                 return new ArrayType(arrayType.getBasicTypeClone(), arrayType.getArraysize(), 1);
             } else if (offsets.size() == 2) {
                 return new BasicType(arrayType.getBasicTypeClone().getBaseType(), 1);
+                // 跟两个参数，表示从数组中获得某个元素的地址，类型为类似i32*,为basicType
             } else {
                 System.out.println("数组维数有问题？");
                 return null;
@@ -46,12 +48,30 @@ public class GetelementptrInstr extends Instruction {
     public void dump(PrintWriter writer) {
         writer.printf("  %s = getelementptr %s, %s %s",
                 this.getName(),
-                elementBase.getTypeOfValue().getTypeClone().subPtr().toString(),
-                elementBase.getTypeOfValue().toString(),
-                elementBase.getName());
-        for (Value offset : offsets) {
+                basePtr.getTypeOfValue().getTypeClone().subPtr().toString(),
+                basePtr.getTypeOfValue().toString(),
+                basePtr.getName());
+        for (IrValue offset : offsets) {
             writer.printf(", %s %s", offset.getTypeOfValue().toString(), offset.getName());
         }
         writer.print("\n");
+    }
+
+    public String dumpToString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.getName()).append(" = getelementptr ").append(basePtr.getTypeOfValue().getTypeClone().subPtr().toString()).append(", ")
+                .append(basePtr.getTypeOfValue().toString()).append(" ").append(basePtr.getName());
+        for (IrValue offset : offsets) {
+            sb.append(", ").append(offset.getTypeOfValue().toString()).append(" ").append(offset.getName());
+        }
+        return sb.toString();
+    }
+
+    public IrValue getBasePtr() {
+        return basePtr;
+    }
+
+    public ArrayList<IrValue> getOffsets() {
+        return offsets;
     }
 }

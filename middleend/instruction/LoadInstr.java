@@ -1,15 +1,15 @@
 package middleend.instruction;
 
 import middleend.LLVM_components.BasicBlock;
-import middleend.LLVM_components.Value;
+import middleend.LLVM_components.IrValue;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public class LoadInstr extends Instruction {
-    private Value pointer;
+    private IrValue pointer;
 
-    public LoadInstr(Value pointer, BasicBlock parentBasicBlock) {
+    public LoadInstr(IrValue pointer, BasicBlock parentBasicBlock) {
         super(pointer.getTypeOfValue().getTypeClone().subPtr(), new ArrayList<>(), parentBasicBlock);
         this.pointer = pointer;
         super.addOperand(pointer);
@@ -22,5 +22,17 @@ public class LoadInstr extends Instruction {
                 getTypeOfValue().toString(),
                 pointer.getTypeOfValue().toString(),
                 pointer.getName());
+    }
+
+    public String dumpToString() {
+        return String.format("%s = load %s, %s %s",
+                this.getName(),
+                getTypeOfValue().toString(),
+                pointer.getTypeOfValue().toString(),
+                pointer.getName());
+    }
+
+    public IrValue getPointer() {
+        return pointer;
     }
 }

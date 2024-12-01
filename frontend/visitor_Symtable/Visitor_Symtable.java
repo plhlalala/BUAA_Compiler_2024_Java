@@ -1,4 +1,4 @@
-package frontend.visitor;
+package frontend.visitor_Symtable;
 
 import frontend.error.ErrorRecord;
 import frontend.error.ErrorType;
@@ -80,6 +80,19 @@ public class Visitor_Symtable {
             }
         }
         return hasError;
+    }
+
+    public static int countFormatSpecifiers(String formatString) {
+        // 定义正则表达式，匹配 %d 或 %c
+        String regex = "%[dc]";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(formatString);
+
+        int count = 0;
+        while (matcher.find()) {
+            count++;
+        }
+        return count;
     }
 
     public void visitCompUnit(CompUnit compUnit) {
@@ -335,21 +348,6 @@ public class Visitor_Symtable {
         }
         return new VisitResult();
     }
-
-
-    public static int countFormatSpecifiers(String formatString) {
-        // 定义正则表达式，匹配 %d 或 %c
-        String regex = "%[dc]";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(formatString);
-
-        int count = 0;
-        while (matcher.find()) {
-            count++;
-        }
-        return count;
-    }
-
 
     public void visitForStmt(ForStmt forStmt) {
         visitLVal(forStmt.lval);

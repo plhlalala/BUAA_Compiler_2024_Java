@@ -9,10 +9,10 @@ import java.util.LinkedList;
 public class TokenBuf {
     private final Lexer lexer;
     private final LinkedList<Token> buffer = new LinkedList<>();
-    private boolean inRecovery = false;
     private final LinkedList<Token> processedBuf = new LinkedList<>();
     private final LinkedList<Token> recoveryBuf = new LinkedList<>();
     private final LinkedList<Token> trytoParseBuf = new LinkedList<>();
+    private boolean inRecovery = false;
 
     public TokenBuf(Lexer lexer) {
         this.lexer = lexer;

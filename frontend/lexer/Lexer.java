@@ -53,14 +53,33 @@ public class Lexer {
         put('!', LexType.NOT);
     }};
     private final PushbackReader reader;
+    private final ArrayList<ErrorRecord> errorRecords;
     private int lineNum;
     private Token token;
-    private final ArrayList<ErrorRecord> errorRecords;
 
     public Lexer(PushbackReader reader, ArrayList<ErrorRecord> errorRecords) {
         this.reader = reader;
         this.errorRecords = errorRecords;
         this.lineNum = 1;
+    }
+
+    public static char processEscapeSequence(char ch) {
+        return switch (ch) {
+            case 'a' -> '\u0007';  // 响铃
+            case 'b' -> '\b';      // 退格
+            case 't' -> '\t';      // 制表符
+            case 'n' -> '\n';      // 换行
+            case 'v' -> '\u000B';  // 垂直制表符
+            case 'f' -> '\f';      // 换页
+            case '\"' -> '\"';     // 双引号
+            case '\'' -> '\'';     // 单引号
+            case '\\' -> '\\';     // 反斜杠
+            case '0' -> '\0';      // 空字符
+            default -> {
+                System.out.println("Error: Invalid escape sequence");
+                yield ch;
+            }
+        };
     }
 
     public boolean next() throws IOException {
@@ -201,24 +220,5 @@ public class Lexer {
 
     public void addErrorRecord(ErrorType errorType, int lineNumber) {
         errorRecords.add(new ErrorRecord(errorType, lineNumber));
-    }
-
-    public static char processEscapeSequence(char ch) {
-        return switch (ch) {
-            case 'a' -> '\u0007';  // 响铃
-            case 'b' -> '\b';      // 退格
-            case 't' -> '\t';      // 制表符
-            case 'n' -> '\n';      // 换行
-            case 'v' -> '\u000B';  // 垂直制表符
-            case 'f' -> '\f';      // 换页
-            case '\"' -> '\"';     // 双引号
-            case '\'' -> '\'';     // 单引号
-            case '\\' -> '\\';     // 反斜杠
-            case '0' -> '\0';      // 空字符
-            default -> {
-                System.out.println("Error: Invalid escape sequence");
-                yield ch;
-            }
-        };
     }
 }

@@ -10,29 +10,6 @@ public class InitVal {
     public String stringConst;
     public boolean hasBrace;
 
-    public void analyze(PrintWriter writer) {
-        if (stringConst != null) {
-            writer.println(LexType.STRCON.getTypename() + " " + "\"" + reverseEscapeSequence(stringConst) + "\"");
-        } else if (exps.size() == 1 && !hasBrace) {
-            exps.get(0).analyze(writer);
-        } else {
-            writer.println(LexType.LBRACE); // {
-            for (Exp Exp : exps) {
-                if (!exps.get(0).equals(Exp)) {
-                    writer.println(LexType.COMMA);
-                }
-                Exp.analyze(writer);
-            }
-            writer.println(LexType.RBRACE); // }
-        }
-        writer.println(this);
-    }
-
-    @Override
-    public String toString() {
-        return "<InitVal>";
-    }
-
     public static String reverseEscapeSequence(char ch) {
         switch (ch) {
             case '\u0007':
@@ -69,5 +46,28 @@ public class InitVal {
             sb.append(reverseEscapeSequence(ch));
         }
         return sb.toString();
+    }
+
+    public void analyze(PrintWriter writer) {
+        if (stringConst != null) {
+            writer.println(LexType.STRCON.getTypename() + " " + "\"" + reverseEscapeSequence(stringConst) + "\"");
+        } else if (exps.size() == 1 && !hasBrace) {
+            exps.get(0).analyze(writer);
+        } else {
+            writer.println(LexType.LBRACE); // {
+            for (Exp Exp : exps) {
+                if (!exps.get(0).equals(Exp)) {
+                    writer.println(LexType.COMMA);
+                }
+                Exp.analyze(writer);
+            }
+            writer.println(LexType.RBRACE); // }
+        }
+        writer.println(this);
+    }
+
+    @Override
+    public String toString() {
+        return "<InitVal>";
     }
 }

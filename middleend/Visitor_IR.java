@@ -45,15 +45,15 @@ import frontend.symtable.SymTable;
 import frontend.symtable.Symbol;
 import frontend.symtable.VarSym;
 import frontend.symtable.VarType;
-import frontend.visitor.VisitResult;
+import frontend.visitor_Symtable.VisitResult;
 import middleend.LLVM_components.BasicBlock;
 import middleend.LLVM_components.Function;
-import middleend.LLVM_components.ImmValueBool;
-import middleend.LLVM_components.ImmValueI32;
+import middleend.LLVM_components.ImmIrValueBool;
+import middleend.LLVM_components.ImmIrValueI32;
+import middleend.LLVM_components.IrValue;
 import middleend.LLVM_components.Module;
-import middleend.LLVM_components.Value;
 import middleend.instruction.BrInstr;
-import middleend.instruction.IcmpCondEnum;
+import middleend.instruction.IcmpOpEnum;
 import middleend.type.ArrayType;
 import middleend.type.BaseTypeEnum;
 import middleend.type.BasicType;
@@ -69,7 +69,7 @@ public class Visitor_IR {
     public SymTable curTable = symTable;
     public int blockLoopLevel = 0;
 
-    public middleend.LLVM_components.Module module = new Module();
+    public Module module = new Module();
     public Function curFunc = null;
     public BasicBlock curBlock = null;
 
@@ -112,7 +112,6 @@ public class Visitor_IR {
         ArrayList<LLVMType> functionParamsType = new ArrayList<>();
         for (VarType varType : funcSym.paramTypeList) {
             if (varType.isArray) {
-//                    functionParamsType.add(new ArrayType(new BasicType(varType.type == LexType.INTTK ? BaseTypeEnum.INT : BaseTypeEnum.CHAR, 0), 114, 0));
                 // 大小为0数组的一维指针 和 普通变量的一维指针 有区别吗？
                 functionParamsType.add(new BasicType(varType.type == LexType.INTTK ? BaseTypeEnum.INT : BaseTypeEnum.CHAR, 1));
             } else {
@@ -127,21 +126,20 @@ public class Visitor_IR {
         // 创建参数的Value,并为Table中的VarSym赋IrValue
         if (funcDef.funcFParams != null) {
             for (int i = 0; i < funcSym.paramTypeList.size(); i++) {
-                Value varValue = curFunc.getParams().get(i);
+                IrValue varIrValue = curFunc.getParams().get(i);
                 VarType varType = funcSym.paramTypeList.get(i);
                 BasicType basicType = new BasicType(varType.type == LexType.INTTK ? BaseTypeEnum.INT : BaseTypeEnum.CHAR, 0);
-                Value valuePtr;
+                IrValue irValuePtr;
                 if (varType.isArray) {
-//                        functionParamsType.add(new BasicType(varType.type == LexType.INTTK ? BaseTypeEnum.INT : BaseTypeEnum.CHAR, 1));
-                    valuePtr = curFunc.getBasicBlocks().get(0).createAllocatInstrInFront(basicType.getTypeClone().addPtr());
+                    irValuePtr = curFunc.getBasicBlocks().get(0).createAllocatInstrInFront(basicType.getTypeClone().addPtr());
                     // alloca 会为 i32* 分配空间, ptr是i32**类型
                 } else {
-                    valuePtr = curFunc.getBasicBlocks().get(0).createAllocatInstrInFront(basicType);
+                    irValuePtr = curFunc.getBasicBlocks().get(0).createAllocatInstrInFront(basicType);
                     // alloca 会为 i32 分配空间, ptr是i32*类型
                 }
-                curBlock.createStoreInstr(varValue, valuePtr);
+                curBlock.createStoreInstr(varIrValue, irValuePtr);
                 String paraIdent = funcDef.funcFParams.FParams.get(i).ident;
-                curTable.get(paraIdent).irValue = valuePtr;
+                curTable.get(paraIdent).irValue = irValuePtr;
             }
         }
         if ((funcDef.block == null)) {
@@ -188,9 +186,9 @@ public class Visitor_IR {
                     }
                 }
             }
-            Value globalValue = module.createGlobalValue(llvmType, varSym.valueList);
-            globalValue.setName(varSym.ident);
-            varSym.irValue = globalValue;
+            IrValue globalIrValue = module.createGlobalValue(llvmType, varSym.valueList);
+            globalIrValue.setName(varSym.ident);
+            varSym.irValue = globalIrValue;
         } else {
             varSym.irValue = curFunc.getBasicBlocks().get(0).createAllocatInstrInFront(llvmType);
             if (constdef.constInitVal != null) {
@@ -222,15 +220,15 @@ public class Visitor_IR {
 
     private void initConstAndVar(VarSym varSym, VisitResult tmp) {
         if (varSym.varType.isArray) {
-            for (int i = 0; i < tmp.irValueList.size(); i++) {
-                Value ptr = curBlock.createGetElementPtrInstr(varSym.irValue, getArrayStartFromZero(new ImmValueI32(i)));
-                Value value = tmp.irValueList.get(i);
-                convertTypeBeforeStore(ptr, value);
+            for (int i = 0; i < tmp.irIrValueList.size(); i++) {
+                IrValue ptr = curBlock.createGetElementPtrInstr(varSym.irValue, getArrayStartFromZero(new ImmIrValueI32(i)));
+                IrValue irValue = tmp.irIrValueList.get(i);
+                convertTypeBeforeStore(ptr, irValue);
             }
         } else {
-            Value ptr = varSym.irValue;
-            Value value = tmp.irValueList.get(0);
-            convertTypeBeforeStore(ptr, value);
+            IrValue ptr = varSym.irValue;
+            IrValue irValue = tmp.irIrValueList.get(0);
+            convertTypeBeforeStore(ptr, irValue);
         }
     }
 
@@ -264,9 +262,9 @@ public class Visitor_IR {
                 VisitResult tmp = visitInitVal(varDef.initVal);
                 varSym.valueList.addAll(tmp.integerList);
             }
-            Value globalValue = module.createGlobalValue(llvmType, varSym.valueList);
-            globalValue.setName(varSym.ident);
-            varSym.irValue = globalValue;
+            IrValue globalIrValue = module.createGlobalValue(llvmType, varSym.valueList);
+            globalIrValue.setName(varSym.ident);
+            varSym.irValue = globalIrValue;
         } else {
             varSym.irValue = curFunc.getBasicBlocks().get(0).createAllocatInstrInFront(llvmType);
             if (varDef.initVal != null) {
@@ -282,13 +280,13 @@ public class Visitor_IR {
         if (constInitVal.stringConst != null) {
             for (char c : constInitVal.stringConst.toCharArray()) {
                 visitResult.integerList.add((int) c);
-                visitResult.irValueList.add(new ImmValueI32(c));
+                visitResult.irIrValueList.add(new ImmIrValueI32(c));
             }
         } else if (constInitVal.constExps != null) {
             for (ConstExp constExp : constInitVal.constExps) {
                 VisitResult tmp = visitConstExp(constExp);
                 visitResult.integerList.add(tmp.constInt);
-                visitResult.irValueList.add(tmp.irValue);
+                visitResult.irIrValueList.add(tmp.irValue);
             }
         } else {
             return null;
@@ -301,13 +299,13 @@ public class Visitor_IR {
         if (initVal.stringConst != null) {
             for (char c : initVal.stringConst.toCharArray()) {
                 visitResult.integerList.add((int) c);
-                visitResult.irValueList.add(new ImmValueI32(c));
+                visitResult.irIrValueList.add(new ImmIrValueI32(c));
             }
         } else if (initVal.exps != null) {
             for (Exp exp : initVal.exps) {
                 VisitResult tmp = visitExp(exp);
                 visitResult.integerList.add(tmp.constInt);
-                visitResult.irValueList.add(tmp.irValue);
+                visitResult.irIrValueList.add(tmp.irValue);
             }
         } else {
             return null;
@@ -387,7 +385,7 @@ public class Visitor_IR {
 
     private void visitPrintStmt(Stmt stmt) {
         Print_stmt print_stmt = (Print_stmt) stmt;
-        ArrayList<Value> args = new ArrayList<>();
+        ArrayList<IrValue> args = new ArrayList<>();
         if (print_stmt.exps != null) {
             for (Exp exp : print_stmt.exps) {
                 args.add(visitExp(exp).irValue);
@@ -407,7 +405,7 @@ public class Visitor_IR {
                 index++;
                 i++;
             } else {
-                curBlock.createCallInstr(Function.IRFUNC_PUTCHAR, getArray(new ImmValueI32(print_stmt.stringConst.charAt(i))));
+                curBlock.createCallInstr(Function.IRFUNC_PUTCHAR, getArray(new ImmIrValueI32(print_stmt.stringConst.charAt(i))));
             }
         }
     }
@@ -448,19 +446,19 @@ public class Visitor_IR {
     private void visitInputStmt(Stmt stmt) {
         LVal input = stmt instanceof GetChar_stmt ? ((GetChar_stmt) stmt).lval : ((GetInt_stmt) stmt).lval;
         VisitResult lvalResult = visitLVal(input);
-        Value ptr = lvalResult.irValue;
+        IrValue ptr = lvalResult.irValue;
         String ident = input.ident;
         VarSym varSym = (VarSym) curTable.get(ident);
         if (stmt instanceof GetInt_stmt) {
-            Value value = curBlock.createCallInstr(Function.IRFUNC_GETINT, new ArrayList<>());
+            IrValue irValue = curBlock.createCallInstr(Function.IRFUNC_GETINT, new ArrayList<>());
             if (varSym != null) {
-                curBlock.createStoreInstr(value, ptr);
+                curBlock.createStoreInstr(irValue, ptr);
             }
         } else {
-            Value value = curBlock.createCallInstr(Function.IRFUNC_GETCHAR, new ArrayList<>());
+            IrValue irValue = curBlock.createCallInstr(Function.IRFUNC_GETCHAR, new ArrayList<>());
             if (varSym != null) {
-                value = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), value);
-                curBlock.createStoreInstr(value, varSym.irValue);
+                irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), irValue);
+                curBlock.createStoreInstr(irValue, varSym.irValue);
             }
         }
     }
@@ -523,9 +521,9 @@ public class Visitor_IR {
     public void visitForStmt(ForStmt forStmt) {
         VisitResult lvalResult = visitLVal(forStmt.lval);
         VisitResult expResult = visitExp(forStmt.exp);
-        Value ptr = lvalResult.irValue;
-        Value value = expResult.irValue;
-        convertTypeBeforeStore(ptr, value);
+        IrValue ptr = lvalResult.irValue;
+        IrValue irValue = expResult.irValue;
+        convertTypeBeforeStore(ptr, irValue);
     }
 
     public VisitResult visitCond(Cond cond) {
@@ -539,10 +537,10 @@ public class Visitor_IR {
     public VisitResult visitAssignLval_stmt(AssignLval_stmt assignLval_stmt) {
         VisitResult tmp = visitLVal(assignLval_stmt.lval);
         if (tmp.irValue != null) {
-            Value lvalPtr = tmp.irValue;
+            IrValue lvalPtr = tmp.irValue;
             VisitResult tmp2 = visitExp(assignLval_stmt.exp);
-            Value value = tmp2.irValue;
-            convertTypeBeforeStore(lvalPtr, value);
+            IrValue irValue = tmp2.irValue;
+            convertTypeBeforeStore(lvalPtr, irValue);
         }
         return new VisitResult();
     }
@@ -606,18 +604,18 @@ public class Visitor_IR {
             if (tmp.constInt != null && tmp2.constInt != null) {
                 if (eqExp.type.equals(LexType.EQL)) {
                     visitResult.constInt = tmp.constInt.compareTo(tmp2.constInt) == 0 ? 1 : 0;
-                    visitResult.irValue = new ImmValueBool(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueBool(visitResult.constInt);
                 } else if (eqExp.type.equals(LexType.NEQ)) {
                     visitResult.constInt = tmp.constInt.compareTo(tmp2.constInt) == 0 ? 0 : 1;
-                    visitResult.irValue = new ImmValueBool(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueBool(visitResult.constInt);
                 }
             } else {
                 convertToI32IfNot(tmp);
                 convertToI32IfNot(tmp2);
                 if (eqExp.type.equals(LexType.EQL)) {
-                    visitResult.irValue = curBlock.createICmpInstr(IcmpCondEnum.EQ, tmp.irValue, tmp2.irValue);
+                    visitResult.irValue = curBlock.createICmpInstr(IcmpOpEnum.EQ, tmp.irValue, tmp2.irValue);
                 } else if (eqExp.type.equals(LexType.NEQ)) {
-                    visitResult.irValue = curBlock.createICmpInstr(IcmpCondEnum.NE, tmp.irValue, tmp2.irValue);
+                    visitResult.irValue = curBlock.createICmpInstr(IcmpOpEnum.NE, tmp.irValue, tmp2.irValue);
                 }
             }
             return visitResult;
@@ -634,28 +632,28 @@ public class Visitor_IR {
             if (tmp.constInt != null && tmp2.constInt != null) {
                 if (relExp.type.equals(LexType.LSS)) {
                     visitResult.constInt = tmp.constInt < tmp2.constInt ? 1 : 0;
-                    visitResult.irValue = new ImmValueBool(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueBool(visitResult.constInt);
                 } else if (relExp.type.equals(LexType.LEQ)) {
                     visitResult.constInt = tmp.constInt <= tmp2.constInt ? 1 : 0;
-                    visitResult.irValue = new ImmValueBool(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueBool(visitResult.constInt);
                 } else if (relExp.type.equals(LexType.GRE)) {
                     visitResult.constInt = tmp.constInt > tmp2.constInt ? 1 : 0;
-                    visitResult.irValue = new ImmValueBool(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueBool(visitResult.constInt);
                 } else if (relExp.type.equals(LexType.GEQ)) {
                     visitResult.constInt = tmp.constInt >= tmp2.constInt ? 1 : 0;
-                    visitResult.irValue = new ImmValueBool(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueBool(visitResult.constInt);
                 }
             } else {
                 convertToI32IfNot(tmp);
                 convertToI32IfNot(tmp2);
                 if (relExp.type.equals(LexType.LSS)) {
-                    visitResult.irValue = curBlock.createICmpInstr(IcmpCondEnum.SLT, tmp.irValue, tmp2.irValue);
+                    visitResult.irValue = curBlock.createICmpInstr(IcmpOpEnum.SLT, tmp.irValue, tmp2.irValue);
                 } else if (relExp.type.equals(LexType.LEQ)) {
-                    visitResult.irValue = curBlock.createICmpInstr(IcmpCondEnum.SLE, tmp.irValue, tmp2.irValue);
+                    visitResult.irValue = curBlock.createICmpInstr(IcmpOpEnum.SLE, tmp.irValue, tmp2.irValue);
                 } else if (relExp.type.equals(LexType.GRE)) {
-                    visitResult.irValue = curBlock.createICmpInstr(IcmpCondEnum.SGT, tmp.irValue, tmp2.irValue);
+                    visitResult.irValue = curBlock.createICmpInstr(IcmpOpEnum.SGT, tmp.irValue, tmp2.irValue);
                 } else if (relExp.type.equals(LexType.GEQ)) {
-                    visitResult.irValue = curBlock.createICmpInstr(IcmpCondEnum.SGE, tmp.irValue, tmp2.irValue);
+                    visitResult.irValue = curBlock.createICmpInstr(IcmpOpEnum.SGE, tmp.irValue, tmp2.irValue);
                 }
             }
             return visitResult;
@@ -673,10 +671,10 @@ public class Visitor_IR {
             if (tmp.constInt != null && tmp2.constInt != null) {
                 if (addExp.op.equals(LexType.PLUS)) {
                     visitResult.constInt = tmp.constInt + tmp2.constInt;
-                    visitResult.irValue = new ImmValueI32(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueI32(visitResult.constInt);
                 } else if (addExp.op.equals(LexType.MINU)) {
                     visitResult.constInt = tmp.constInt - tmp2.constInt;
-                    visitResult.irValue = new ImmValueI32(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueI32(visitResult.constInt);
                 }
             } else {
                 convertToI32IfNot(tmp);
@@ -703,13 +701,13 @@ public class Visitor_IR {
             if (tmp.constInt != null && tmp2.constInt != null) {
                 if (mulExp.op.equals(LexType.MULT)) {
                     visitResult.constInt = tmp.constInt * tmp2.constInt;
-                    visitResult.irValue = new ImmValueI32(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueI32(visitResult.constInt);
                 } else if (mulExp.op.equals(LexType.DIV)) {
                     visitResult.constInt = tmp.constInt / tmp2.constInt;
-                    visitResult.irValue = new ImmValueI32(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueI32(visitResult.constInt);
                 } else if (mulExp.op.equals(LexType.MOD)) {
                     visitResult.constInt = tmp.constInt % tmp2.constInt;
-                    visitResult.irValue = new ImmValueI32(visitResult.constInt);
+                    visitResult.irValue = new ImmIrValueI32(visitResult.constInt);
                 }
             } else {
                 convertToI32IfNot(tmp);
@@ -732,18 +730,18 @@ public class Visitor_IR {
             if (result.constInt != null) {
                 if (unaryExp.op.type.equals(LexType.MINU)) {
                     result.constInt = -result.constInt;
-                    result.irValue = new ImmValueI32(result.constInt);
+                    result.irValue = new ImmIrValueI32(result.constInt);
                 } else if (unaryExp.op.type.equals(LexType.NOT)) {
                     result.constInt = result.constInt == 0 ? 1 : 0;
-                    result.irValue = new ImmValueI32(result.constInt);
+                    result.irValue = new ImmIrValueI32(result.constInt);
                 } else {
-                    result.irValue = new ImmValueI32(result.constInt);
+                    result.irValue = new ImmIrValueI32(result.constInt);
                 }
             } else {
                 if (unaryExp.op.type.equals(LexType.MINU)) {
-                    result.irValue = curBlock.createSubInstr(new ImmValueI32(0), result.irValue);
+                    result.irValue = curBlock.createSubInstr(new ImmIrValueI32(0), result.irValue);
                 } else if (unaryExp.op.type.equals(LexType.NOT)) {
-                    result.irValue = curBlock.createICmpInstr(IcmpCondEnum.EQ, result.irValue, new ImmValueI32(0));
+                    result.irValue = curBlock.createICmpInstr(IcmpOpEnum.EQ, result.irValue, new ImmIrValueI32(0));
                 }
             }
             return result;
@@ -761,20 +759,20 @@ public class Visitor_IR {
             visitResult.varType = new VarType();
             visitResult.varType.type = funcSym.retType;
             visitResult.varType.isArray = false;
-            for (int i = 0; i < tmp.irValueList.size(); i++) { // 针对int8_t和int32_t的转换
-                Value value = tmp.irValueList.get(i);
-                BaseTypeEnum argType = value.getTypeOfValue().getBaseType();
+            for (int i = 0; i < tmp.irIrValueList.size(); i++) { // 针对int8_t和int32_t的转换
+                IrValue irValue = tmp.irIrValueList.get(i);
+                BaseTypeEnum argType = irValue.getTypeOfValue().getBaseType();
                 BaseTypeEnum paramType = funcSym.paramTypeList.get(i).type == LexType.INTTK ? BaseTypeEnum.INT : BaseTypeEnum.CHAR;
                 if (argType != paramType) {
                     if (argType == BaseTypeEnum.INT) {
-                        value = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), value);
+                        irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), irValue);
                     } else {
-                        value = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), value);
+                        irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), irValue);
                     }
-                    tmp.irValueList.set(i, value);
+                    tmp.irIrValueList.set(i, irValue);
                 }
             }
-            visitResult.irValue = curBlock.createCallInstr(((Function) funcSym.irValue), tmp.irValueList);
+            visitResult.irValue = curBlock.createCallInstr(((Function) funcSym.irValue), tmp.irIrValueList);
             return visitResult;
         }
     }
@@ -793,11 +791,11 @@ public class Visitor_IR {
                     if (a.constInt == null) {
                         tmp.irValue = curBlock.createLoadInstr(tmp.irValue);
                     } else {
-                        tmp.irValue = new ImmValueI32(varSym.valueList.get(a.constInt));
+                        tmp.irValue = new ImmIrValueI32(varSym.valueList.get(a.constInt));
                         tmp.constInt = varSym.valueList.get(a.constInt);
                     }
                 } else if (varSym.isConst) {
-                    tmp.irValue = new ImmValueI32(varSym.valueList.get(0));
+                    tmp.irValue = new ImmIrValueI32(varSym.valueList.get(0));
                     tmp.constInt = varSym.valueList.get(0);
                 } else {
                     tmp.irValue = curBlock.createLoadInstr(tmp.irValue);
@@ -808,12 +806,12 @@ public class Visitor_IR {
             visitResult.varType = new VarType();
             visitResult.varType.type = LexType.INTTK;
             visitResult.constInt = Integer.parseInt(primaryExp.number.intConst);
-            visitResult.irValue = new ImmValueI32(visitResult.constInt);
+            visitResult.irValue = new ImmIrValueI32(visitResult.constInt);
         } else {
             visitResult.varType = new VarType();
             visitResult.varType.type = LexType.CHARTK;
             visitResult.constInt = (int) primaryExp.character.charConst.charAt(0);
-            visitResult.irValue = new ImmValueI32(visitResult.constInt);
+            visitResult.irValue = new ImmIrValueI32(visitResult.constInt);
         }
         return visitResult;
     }
@@ -831,21 +829,23 @@ public class Visitor_IR {
             VisitResult lvalExpResult = visitExp(lval.exp);
             if (lvalExpResult.constInt != null && varSym.isConst) { // 常量数组, 不会处理把常量数组当作参数传进去的情况
                 visitResult.constInt = varSym.valueList.get(lvalExpResult.constInt);
-                visitResult.irValue = new ImmValueI32(visitResult.constInt);
+                visitResult.irValue = new ImmIrValueI32(visitResult.constInt);
             } else {
-                Value symIrValue = varSym.irValue;
-                if (symIrValue.getTypeOfValue().getPtrNum() == 1) { // 如果是1,比如直接使用数组的某个元素
-                    visitResult.irValue = curBlock.createGetElementPtrInstr(symIrValue, getArrayStartFromZero(lvalExpResult.irValue));
+                IrValue symIrIrValue = varSym.irValue;
+                if (symIrIrValue.getTypeOfValue().getPtrNum() == 1) { // 如果是1,比如直接使用数组的某个元素
+                    visitResult.irValue = curBlock.createGetElementPtrInstr(symIrIrValue, getArrayStartFromZero(lvalExpResult.irValue));
                 } else {  // 如果是2,比如作为函数参数传递的数组,需要先load
-                    Value load = curBlock.createLoadInstr(symIrValue);
+                    IrValue load = curBlock.createLoadInstr(symIrIrValue);
                     visitResult.irValue = curBlock.createGetElementPtrInstr(load, getArray(lvalExpResult.irValue));
                 }
             }
-        } else if (varSym.varType.isArray) { //返回指针,要么是数组的首地址,要么是某个元素的指针
+        } else if (varSym.varType.isArray) { //根据符号表判断是不是数组（参数传入数组时会在符号表标记），
+            // 但是数组符号表绑定的Irvalue是i32**指针,是根据符号表判断基本类型后alloc的i32**指针，用来存储参数数组的首地址的值
+            // 返回指针,要么是数组的首地址,要么是某个元素的指针
             visitResult.varType.isArray = true;
             if (varSym.irValue.getTypeOfValue().getPtrNum() == 2) { // 数组作为形参后,alloca 一个i32**指针,要取真实地址需要Load
                 visitResult.irValue = curBlock.createLoadInstr(varSym.irValue);
-            } else if (varSym.irValue.getTypeOfValue().getPtrNum() == 1) {  // 需要根据数组整体的起始地址得到首地址
+            } else if (varSym.irValue.getTypeOfValue().getPtrNum() == 1) {  // 需要根据数组整体的起始地址得到首地址，这里表示不是被当作参数传递的，是本函数内或者全局alloc的
                 visitResult.irValue = curBlock.createGetElementPtrInstr(varSym.irValue, getArrayZeroToZero());
             } else {
                 System.out.println("error in lval 数组指针数异常?");
@@ -854,7 +854,7 @@ public class Visitor_IR {
         } else { // 变量,返回的是变量的指针,根据需要后面再load
             visitResult.varType.isArray = false;
             if (varSym.isConst) {
-                visitResult.irValue = new ImmValueI32(varSym.valueList.get(0));
+                visitResult.irValue = new ImmIrValueI32(varSym.valueList.get(0));
             } else {
                 visitResult.irValue = varSym.irValue;
                 // 返回的是变量的指针
@@ -868,7 +868,7 @@ public class Visitor_IR {
         for (Exp exp : funcRParams.exps) {
             VisitResult tmp = visitExp(exp);
             visitResult.paraTypeList.add(tmp.varType);
-            visitResult.irValueList.add(tmp.irValue);
+            visitResult.irIrValueList.add(tmp.irValue);
         }
         return visitResult;
     }
@@ -904,22 +904,22 @@ public class Visitor_IR {
         return visitAddExp(exp.addExp);
     }
 
-    public ArrayList<Value> getArrayStartFromZero(Value array) {
-        ArrayList<Value> index = new ArrayList<>();
-        index.add(new ImmValueI32(0));
+    public ArrayList<IrValue> getArrayStartFromZero(IrValue array) {
+        ArrayList<IrValue> index = new ArrayList<>();
+        index.add(new ImmIrValueI32(0));
         index.add(array);
         return index;
     }
 
-    public ArrayList<Value> getArrayZeroToZero() {
-        ArrayList<Value> index = new ArrayList<>();
-        index.add(new ImmValueI32(0));
-        index.add(new ImmValueI32(0));
+    public ArrayList<IrValue> getArrayZeroToZero() {
+        ArrayList<IrValue> index = new ArrayList<>();
+        index.add(new ImmIrValueI32(0));
+        index.add(new ImmIrValueI32(0));
         return index;
     }
 
-    public ArrayList<Value> getArray(Value ele) {
-        ArrayList<Value> indexList = new ArrayList<>();
+    public ArrayList<IrValue> getArray(IrValue ele) {
+        ArrayList<IrValue> indexList = new ArrayList<>();
         indexList.add(ele);
         return indexList;
     }
@@ -927,23 +927,23 @@ public class Visitor_IR {
     private void convertTo_I1_IcmpInstr(VisitResult tmp) {
         if (tmp.irValue.getTypeOfValue().getBaseType() != BaseTypeEnum.BOOL) {
             if (tmp.constInt != null) {
-                tmp.irValue = tmp.constInt == 0 ? new ImmValueBool(0) : new ImmValueBool(1);
+                tmp.irValue = tmp.constInt == 0 ? new ImmIrValueBool(0) : new ImmIrValueBool(1);
             } else {
-                tmp.irValue = curBlock.createICmpInstr(IcmpCondEnum.NE, tmp.irValue, new ImmValueI32(0));
+                tmp.irValue = curBlock.createICmpInstr(IcmpOpEnum.NE, tmp.irValue, new ImmIrValueI32(0));
             }
         }
         curBlock.createBrInstr(null, null, tmp.irValue);
     }
 
-    private void convertTypeBeforeStore(Value ptr, Value value) {
-        if (ptr.getTypeOfValue().getBaseType() != value.getTypeOfValue().getBaseType()) {
+    private void convertTypeBeforeStore(IrValue ptr, IrValue irValue) {
+        if (ptr.getTypeOfValue().getBaseType() != irValue.getTypeOfValue().getBaseType()) {
             if (ptr.getTypeOfValue().getBaseType() == BaseTypeEnum.INT) {
-                value = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), value);
+                irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), irValue);
             } else {
-                value = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), value);
+                irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), irValue);
             }
         }
-        curBlock.createStoreInstr(value, ptr);
+        curBlock.createStoreInstr(irValue, ptr);
     }
 
     public void convertToI32IfNot(VisitResult visitResult) {

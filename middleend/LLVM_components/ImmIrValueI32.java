@@ -3,11 +3,11 @@ package middleend.LLVM_components;
 import middleend.type.BaseTypeEnum;
 import middleend.type.BasicType;
 
-public class ImmValueBool extends Value {
+public class ImmIrValueI32 extends IrValue {
     private final int value;
 
-    public ImmValueBool(int value) {
-        super(new BasicType(BaseTypeEnum.BOOL, 0));
+    public ImmIrValueI32(int value) {
+        super(new BasicType(BaseTypeEnum.INT, 0));
         this.value = value;
     }
 

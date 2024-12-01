@@ -4,13 +4,13 @@ import middleend.type.LLVMType;
 
 import java.util.ArrayList;
 
-public class User extends Value {
-    private ArrayList<Value> operands = new ArrayList<>();
+public class User extends IrValue {
+    private ArrayList<IrValue> operands = new ArrayList<>();
     private int pos = 0;
 
-    public User(LLVMType type, ArrayList<Value> operands) {
+    public User(LLVMType type, ArrayList<IrValue> operands) {
         super(type);
-        for (Value op : operands) {
+        for (IrValue op : operands) {
             if (op != null) {
                 op.addUse(this, pos);
             }
@@ -19,21 +19,21 @@ public class User extends Value {
         }
     }
 
-    public void addOperand(Value operand) {
+    public void addOperand(IrValue operand) {
         operands.add(operand);
         operand.addUse(this, pos);
         pos++;
     }
 
-    public ArrayList<Value> getOperands() {
+    public ArrayList<IrValue> getOperands() {
         return operands;
     }
 
-    public int findOperand(Value operand) {
+    public int findOperand(IrValue operand) {
         return operands.indexOf(operand);
     }
 
-    public void replaceOperand(int pos, Value newOperand) {
+    public void replaceOperand(int pos, IrValue newOperand) {
         operands.set(pos, newOperand);
     }
 }

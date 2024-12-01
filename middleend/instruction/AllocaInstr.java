@@ -22,4 +22,8 @@ public class AllocaInstr extends Instruction {
     public void dump(PrintWriter writer) {
         writer.printf("  %s = alloca %s\n", this.getName(), this.getAllocatedType().toString());
     }
+
+    public String dumpToString() {
+        return String.format("%s = alloca %s", this.getName(), this.getAllocatedType().toString());
+    }
 }

@@ -1,6 +1,6 @@
 package middleend.instruction;
 
-public enum IcmpCondEnum {
+public enum IcmpOpEnum {
     EQ,
     NE,
     SGT,

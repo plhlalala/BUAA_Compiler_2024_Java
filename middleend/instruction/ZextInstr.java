@@ -1,28 +1,44 @@
 package middleend.instruction;
 
 import middleend.LLVM_components.BasicBlock;
-import middleend.LLVM_components.Value;
+import middleend.LLVM_components.IrValue;
 import middleend.type.LLVMType;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public class ZextInstr extends Instruction {
-    private Value value;
+    private IrValue irValue;
     private LLVMType destType;
 
-    public ZextInstr(Value value, LLVMType destType, BasicBlock parentBasicBlock) {
+    public ZextInstr(IrValue irValue, LLVMType destType, BasicBlock parentBasicBlock) {
         super(destType, new ArrayList<>(), parentBasicBlock);
-        this.value = value;
+        this.irValue = irValue;
         this.destType = destType;
-        super.addOperand(value);
+        super.addOperand(irValue);
     }
 
     public void dump(PrintWriter writer) {
         writer.printf("  %s = zext %s %s to %s\n",
                 this.getName(),
-                value.getTypeOfValue().toString(),
-                value.getName(),
+                irValue.getTypeOfValue().toString(),
+                irValue.getName(),
                 destType.toString());
+    }
+
+    public String dumpToString() {
+        return String.format("%s = zext %s %s to %s",
+                this.getName(),
+                irValue.getTypeOfValue().toString(),
+                irValue.getName(),
+                destType.toString());
+    }
+
+    public IrValue getIrValue() {
+        return irValue;
+    }
+
+    public LLVMType getDestType() {
+        return destType;
     }
 }
