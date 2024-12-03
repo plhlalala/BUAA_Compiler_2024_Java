@@ -7,7 +7,7 @@ public class ImmIrValueI8 extends IrValue { // TODO:i8 常量传播等待完成
     private final int value;
 
     public ImmIrValueI8(int value) {
-        super(new BasicType(BaseTypeEnum.INT, 0));
+        super(new BasicType(BaseTypeEnum.CHAR, 0));
         this.value = value;
     }
 

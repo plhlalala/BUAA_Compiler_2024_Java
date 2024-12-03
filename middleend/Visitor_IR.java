@@ -50,6 +50,7 @@ import middleend.LLVM_components.BasicBlock;
 import middleend.LLVM_components.Function;
 import middleend.LLVM_components.ImmIrValueBool;
 import middleend.LLVM_components.ImmIrValueI32;
+import middleend.LLVM_components.ImmIrValueI8;
 import middleend.LLVM_components.IrValue;
 import middleend.LLVM_components.Module;
 import middleend.instruction.BrInstr;
@@ -369,9 +370,21 @@ public class Visitor_IR {
                     BaseTypeEnum valueTypeEnum = expResult.irValue.getTypeOfValue().getBaseType();
                     if (ret != valueTypeEnum) {
                         if (ret == BaseTypeEnum.INT) {
-                            expResult.irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), expResult.irValue);
+                            if (expResult.irValue instanceof ImmIrValueBool bool) {
+                                expResult.irValue = new ImmIrValueI32(bool.getValue() != 0 ? 1 : 0);
+                            } else if (expResult.irValue instanceof ImmIrValueI8 i8) {
+                                expResult.irValue = new ImmIrValueI32(i8.getValue());
+                            } else {
+                                expResult.irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), expResult.irValue);
+                            }
                         } else {
-                            expResult.irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), expResult.irValue);
+                            if (expResult.irValue instanceof ImmIrValueI32 i32) {
+                                expResult.irValue = new ImmIrValueI8(i32.getValue() & 0xff);
+                            } else if (expResult.irValue instanceof ImmIrValueBool bool) {
+                                expResult.irValue = new ImmIrValueI8(bool.getValue() != 0 ? 1 : 0);
+                            } else {
+                                expResult.irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), expResult.irValue);
+                            }
                         }
                     }
                 }
@@ -454,7 +467,7 @@ public class Visitor_IR {
             if (varSym != null) {
                 curBlock.createStoreInstr(irValue, ptr);
             }
-        } else {
+        } else { // GetChar_stmt
             IrValue irValue = curBlock.createCallInstr(Function.IRFUNC_GETCHAR, new ArrayList<>());
             if (varSym != null) {
                 irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), irValue);
@@ -765,9 +778,17 @@ public class Visitor_IR {
                 BaseTypeEnum paramType = funcSym.paramTypeList.get(i).type == LexType.INTTK ? BaseTypeEnum.INT : BaseTypeEnum.CHAR;
                 if (argType != paramType) {
                     if (argType == BaseTypeEnum.INT) {
-                        irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), irValue);
+                        if (irValue instanceof ImmIrValueI32 i32) {
+                            irValue = new ImmIrValueI8(i32.getValue() & 0xff);
+                        } else {
+                            irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), irValue);
+                        }
                     } else {
-                        irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), irValue);
+                        if (irValue instanceof ImmIrValueI8 i8) {
+                            irValue = new ImmIrValueI32(i8.getValue());
+                        } else {
+                            irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), irValue);
+                        }
                     }
                     tmp.irIrValueList.set(i, irValue);
                 }
@@ -938,9 +959,21 @@ public class Visitor_IR {
     private void convertTypeBeforeStore(IrValue ptr, IrValue irValue) {
         if (ptr.getTypeOfValue().getBaseType() != irValue.getTypeOfValue().getBaseType()) {
             if (ptr.getTypeOfValue().getBaseType() == BaseTypeEnum.INT) {
-                irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), irValue);
+                if (irValue instanceof ImmIrValueBool bool) {
+                    irValue = new ImmIrValueI32(bool.getValue() != 0 ? 1 : 0);
+                } else if (irValue instanceof ImmIrValueI8 i8) {
+                    irValue = new ImmIrValueI32(i8.getValue());
+                } else {
+                    irValue = curBlock.createZextInstr(new BasicType(BaseTypeEnum.INT, 0), irValue);
+                }
             } else {
-                irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), irValue);
+                if (irValue instanceof ImmIrValueI32 i32) {
+                    irValue = new ImmIrValueI8(i32.getValue() & 0xff);
+                } else if (irValue instanceof ImmIrValueBool bool) {
+                    irValue = new ImmIrValueI8(bool.getValue() != 0 ? 1 : 0);
+                } else {
+                    irValue = curBlock.createTruncInstr(new BasicType(BaseTypeEnum.CHAR, 0), irValue);
+                }
             }
         }
         curBlock.createStoreInstr(irValue, ptr);
