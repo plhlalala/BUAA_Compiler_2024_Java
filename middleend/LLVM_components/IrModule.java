@@ -7,12 +7,12 @@ import middleend.type.LLVMType;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
-public class Module extends IrValue {
+public class IrModule extends IrValue {
     private final ArrayList<GlobalIrValue> globalVariables;
     private final ArrayList<Function> functions;
     private Function mainFunction;
 
-    public Module() {
+    public IrModule() {
         super(new BasicType(BaseTypeEnum.VOID, 1));
         globalVariables = new ArrayList<>();
         functions = new ArrayList<>();
@@ -21,6 +21,13 @@ public class Module extends IrValue {
 
     public ArrayList<GlobalIrValue> getGlobalVariables() {
         return globalVariables;
+    }
+
+    public ArrayList<Function> getFunctionListWithMain() {
+        ArrayList<Function> functionList = new ArrayList<>();
+        functionList.addAll(functions);
+        functionList.add(mainFunction);
+        return functionList;
     }
 
     public ArrayList<Function> getFunctions() {

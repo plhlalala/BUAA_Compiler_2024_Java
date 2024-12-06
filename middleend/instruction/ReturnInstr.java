@@ -13,7 +13,6 @@ public class ReturnInstr extends Instruction {
 
     public ReturnInstr(IrValue irValue, BasicBlock parentBasicBlock) {
         super(irValue.getTypeOfValue().getTypeClone(), new ArrayList<>(), parentBasicBlock);
-        this.irValue = irValue;
         super.addOperand(irValue);
     }
 
@@ -23,6 +22,7 @@ public class ReturnInstr extends Instruction {
     }
 
     public void dump(PrintWriter writer) {
+        getReturn();
         if (this.getTypeOfValue().getBaseType() != BaseTypeEnum.VOID) {
             writer.printf("  ret %s %s\n", getTypeOfValue().toString(), irValue.getName());
         } else {
@@ -31,6 +31,7 @@ public class ReturnInstr extends Instruction {
     }
 
     public String dumpToString() {
+        getReturn();
         if (this.getTypeOfValue().getBaseType() != BaseTypeEnum.VOID) {
             return String.format("ret %s %s", getTypeOfValue().toString(), irValue.getName());
         } else {
@@ -39,6 +40,10 @@ public class ReturnInstr extends Instruction {
     }
 
     public IrValue getReturn() {
+        if (super.getOperands().isEmpty()) {
+            return null;
+        }
+        this.irValue = super.getOperands().get(0);
         return irValue;
     }
 }

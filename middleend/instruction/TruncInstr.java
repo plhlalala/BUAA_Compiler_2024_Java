@@ -13,12 +13,12 @@ public class TruncInstr extends Instruction {
 
     public TruncInstr(IrValue irValue, LLVMType destType, BasicBlock parentBasicBlock) {
         super(destType, new ArrayList<>(), parentBasicBlock);
-        this.irValue = irValue;
         this.destType = destType;
         super.addOperand(irValue);
     }
 
     public void dump(PrintWriter writer) {
+        getIrValue();
         writer.printf("  %s = trunc %s %s to %s\n",
                 this.getName(),
                 irValue.getTypeOfValue().toString(),
@@ -27,6 +27,7 @@ public class TruncInstr extends Instruction {
     }
 
     public String dumpToString() {
+        getIrValue();
         return String.format("%s = trunc %s %s to %s",
                 this.getName(),
                 irValue.getTypeOfValue().toString(),
@@ -35,6 +36,7 @@ public class TruncInstr extends Instruction {
     }
 
     public IrValue getIrValue() {
+        this.irValue = super.getOperands().get(0);
         return irValue;
     }
 

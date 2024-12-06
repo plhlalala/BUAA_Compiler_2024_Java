@@ -52,7 +52,7 @@ import middleend.LLVM_components.ImmIrValueBool;
 import middleend.LLVM_components.ImmIrValueI32;
 import middleend.LLVM_components.ImmIrValueI8;
 import middleend.LLVM_components.IrValue;
-import middleend.LLVM_components.Module;
+import middleend.LLVM_components.IrModule;
 import middleend.instruction.BrInstr;
 import middleend.instruction.IcmpOpEnum;
 import middleend.type.ArrayType;
@@ -70,7 +70,7 @@ public class Visitor_IR {
     public SymTable curTable = symTable;
     public int blockLoopLevel = 0;
 
-    public Module module = new Module();
+    public IrModule irModule = new IrModule();
     public Function curFunc = null;
     public BasicBlock curBlock = null;
 
@@ -92,7 +92,7 @@ public class Visitor_IR {
 
     public void visitMainFuncDef(MainFuncDef mainFuncDef) {
         curTable = curTable.createChild(); // 进入main函数作用域,切换到新的符号表
-        curFunc = (Function) module.createMainFunc();
+        curFunc = (Function) irModule.createMainFunc();
         curBlock = curFunc.createBasicBlock();
         visitBlock(mainFuncDef.block);
         curTable = curTable.parent;
@@ -121,7 +121,7 @@ public class Visitor_IR {
         }
         LLVMType retType = funcSym.retType.equals(LexType.VOIDTK) ? new BasicType(BaseTypeEnum.VOID, 0) :
                 new BasicType(funcSym.retType.equals(LexType.INTTK) ? BaseTypeEnum.INT : BaseTypeEnum.CHAR, 0);
-        curFunc = (Function) (module.createFunction(retType, functionParamsType, funcSym.ident));
+        curFunc = (Function) (irModule.createFunction(retType, functionParamsType, funcSym.ident));
         funcSym.irValue = curFunc;
         curBlock = curFunc.createBasicBlock();
         // 创建参数的Value,并为Table中的VarSym赋IrValue
@@ -187,7 +187,7 @@ public class Visitor_IR {
                     }
                 }
             }
-            IrValue globalIrValue = module.createGlobalValue(llvmType, varSym.valueList);
+            IrValue globalIrValue = irModule.createGlobalValue(llvmType, varSym.valueList);
             globalIrValue.setName(varSym.ident);
             varSym.irValue = globalIrValue;
         } else {
@@ -263,7 +263,7 @@ public class Visitor_IR {
                 VisitResult tmp = visitInitVal(varDef.initVal);
                 varSym.valueList.addAll(tmp.integerList);
             }
-            IrValue globalIrValue = module.createGlobalValue(llvmType, varSym.valueList);
+            IrValue globalIrValue = irModule.createGlobalValue(llvmType, varSym.valueList);
             globalIrValue.setName(varSym.ident);
             varSym.irValue = globalIrValue;
         } else {

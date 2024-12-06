@@ -20,7 +20,11 @@ public class User extends IrValue {
     }
 
     public void addOperand(IrValue operand) {
-        operands.add(operand);
+        this.operands.add(operand);
+        if (operand == null) {
+            pos++;
+            return; // 占位
+        }
         operand.addUse(this, pos);
         pos++;
     }
@@ -35,5 +39,6 @@ public class User extends IrValue {
 
     public void replaceOperand(int pos, IrValue newOperand) {
         operands.set(pos, newOperand);
+        newOperand.addUse(this, pos);
     }
 }

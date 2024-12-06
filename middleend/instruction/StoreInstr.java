@@ -14,13 +14,13 @@ public class StoreInstr extends Instruction {
 
     public StoreInstr(IrValue irValue, IrValue pointer, BasicBlock basicBlock) {
         super(new BasicType(BaseTypeEnum.VOID, 0), new ArrayList<>(), basicBlock);
-        this.pointer = pointer;
-        this.irValue = irValue;
         super.addOperand(irValue);
         super.addOperand(pointer);
     }
 
     public void dump(PrintWriter writer) {
+        getPointer();
+        getValue();
         writer.printf("  store %s %s, %s %s\n",
                 irValue.getTypeOfValue().toString(),
                 irValue.getName(),
@@ -29,6 +29,8 @@ public class StoreInstr extends Instruction {
     }
 
     public String dumpToString() {
+        getPointer();
+        getValue();
         return String.format("store %s %s, %s %s",
                 irValue.getTypeOfValue().toString(),
                 irValue.getName(),
@@ -37,10 +39,12 @@ public class StoreInstr extends Instruction {
     }
 
     public IrValue getPointer() {
+        this.pointer = super.getOperands().get(1);
         return pointer;
     }
 
     public IrValue getValue() {
+        this.irValue = super.getOperands().get(0);
         return irValue;
     }
 }

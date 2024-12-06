@@ -10,6 +10,8 @@ import middleend.instruction.IcmpInstr;
 import middleend.instruction.IcmpOpEnum;
 import middleend.instruction.Instruction;
 import middleend.instruction.LoadInstr;
+import middleend.instruction.PcopyInstr;
+import middleend.instruction.PhiInstr;
 import middleend.instruction.ReturnInstr;
 import middleend.instruction.StoreInstr;
 import middleend.instruction.TruncInstr;
@@ -20,11 +22,24 @@ import middleend.type.LLVMType;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 public class BasicBlock extends IrValue {
     private Function parentFunction;
     private ArrayList<Instruction> instructions;
     private int loopNum;
+
+    private ArrayList<BasicBlock> successors;
+    private ArrayList<BasicBlock> predecessors;
+    private ArrayList<BasicBlock> domList;
+    private BasicBlock paraentDom;
+    private ArrayList<BasicBlock> childrenDom;
+    private ArrayList<BasicBlock> domFrontierList;
+
+    private HashSet<IrValue> in;
+    private HashSet<IrValue> out;
+    private HashSet<IrValue> def;
+    private HashSet<IrValue> use;
 
     public BasicBlock(Function parentFunction) {
         super(new BasicType(BaseTypeEnum.LABEL, 0));
@@ -165,10 +180,79 @@ public class BasicBlock extends IrValue {
         return zextInstr;
     }
 
+    public IrValue createPhiInstrInFront(LLVMType type, ArrayList<BasicBlock> preBlocks) {
+        Instruction phiInstr = new PhiInstr(type, preBlocks, this);
+        this.instructions.add(0, phiInstr);
+        phiInstr.setParentBasicBlock(this);
+        return phiInstr;
+    }
+
+    public IrValue insertInstrToLast(Instruction instr) {
+        this.instructions.add(instr);
+        instr.setParentBasicBlock(this);
+        return instr;
+    }
+
+    public void addBlockAndInsertPcopyInstrToLast(BasicBlock sucblock, PcopyInstr pcopyInstr) {
+        BasicBlock mid = new BasicBlock(this.parentFunction);
+        this.parentFunction.getBasicBlocks().add
+                (this.parentFunction.getBasicBlocks().indexOf(sucblock), mid);
+        mid.insertInstrToLast(pcopyInstr);
+        mid.createBrInstr(sucblock);
+        BrInstr brInstr = (BrInstr) (this.instructions.get(this.instructions.size() - 1));
+        if (brInstr.getTrueBranch().equals(sucblock)) {
+            brInstr.setTrueBranch(mid);
+        } else {
+            brInstr.setFalseBranch(mid);
+        }
+        this.getSuccessors();
+        sucblock.getPredecessors().add(sucblock.getPredecessors().indexOf(this), mid);
+        sucblock.getPredecessors().remove(this);
+        mid.setSuccessors(new ArrayList<>());
+        mid.getSuccessors().add(sucblock);
+        mid.setPredecessors(new ArrayList<>());
+        mid.getPredecessors().add(this);
+    }
+
+    public void buildDefUseChain() {
+        def = new HashSet<>();
+        use = new HashSet<>();
+        for (Instruction instr : instructions) {
+            if (instr instanceof PhiInstr) {
+                for (IrValue operand : instr.getOperands()) {
+                    if (operand instanceof Instruction || operand instanceof FunctionParam || operand instanceof GlobalIrValue) {
+                        use.add(operand);
+                    }
+                }
+                def.add(instr);
+            } else {
+                for (IrValue operand : instr.getOperands()) {
+                    if (!def.contains(operand) && (operand instanceof Instruction || operand instanceof FunctionParam || operand instanceof GlobalIrValue)) {
+                        use.add(operand);
+                    }
+                }
+                if (!use.contains(instr) && judgeIsValue(instr)) {
+                    def.add(instr);
+                }
+            }
+        }
+    }
+
+    public boolean judgeIsValue(Instruction instr) {
+        if (instr instanceof AllocaInstr || instr instanceof BinaryInstr || instr instanceof GetelementptrInstr
+                || instr instanceof LoadInstr || instr instanceof TruncInstr || instr instanceof ZextInstr
+                || instr instanceof PhiInstr || instr instanceof IcmpInstr) {
+            return true;
+        }
+        if (instr instanceof CallInstr callInstr) {
+            return callInstr.getFunc().getReturnBaseType() != BaseTypeEnum.VOID;
+        }
+        return false;
+    }
+
     public Instruction getLastInstruction() {
         return instructions.get(instructions.size() - 1);
     }
-
 
     @Override
     public String getName() {
@@ -182,12 +266,6 @@ public class BasicBlock extends IrValue {
         writer.println(this.getName() + ":");
         for (Instruction instr : instructions) {
             instr.dump(writer);
-        }
-
-        if (this.instructions.isEmpty() ||
-                !(getLastInstruction() instanceof BrInstr) && !(getLastInstruction() instanceof ReturnInstr)) {
-            this.instructions.add(new ReturnInstr(this));
-            writer.println("  ret void");
         }
         writer.println("");
     }
@@ -206,7 +284,102 @@ public class BasicBlock extends IrValue {
         return instructions;
     }
 
+    public Function getParentFunction() {
+        return parentFunction;
+    }
+
     public String getMIPSLabelName() {
         return this.parentFunction.getName() + "_" + this.getName();
+    }
+
+    public ArrayList<BasicBlock> getSuccessors() {
+        ArrayList<BasicBlock> successors = new ArrayList<>();
+        if (getLastInstruction() instanceof BrInstr) {
+            BrInstr brInstr = (BrInstr) getLastInstruction();
+            if (brInstr.getCond() == null) {
+                successors.add(brInstr.getDest());
+            } else {
+                successors.add(brInstr.getTrueBranch());
+                successors.add(brInstr.getFalseBranch());
+            }
+        }
+        this.successors = successors;
+        return successors;
+    }
+
+    public void setSuccessors(ArrayList<BasicBlock> successors) {
+        this.successors = successors;
+    }
+
+    public ArrayList<BasicBlock> getPredecessors() {
+        return predecessors;
+    }
+
+    public void setPredecessors(ArrayList<BasicBlock> predecessors) {
+        this.predecessors = predecessors;
+    }
+
+    public ArrayList<BasicBlock> getDomList() {
+        return domList;
+    }
+
+    public void setDomList(ArrayList<BasicBlock> domList) {
+        this.domList = domList;
+    }
+
+    public BasicBlock getParaentDom() {
+        return paraentDom;
+    }
+
+    public void setParaentDom(BasicBlock paraentDom) {
+        this.paraentDom = paraentDom;
+    }
+
+    public ArrayList<BasicBlock> getChildrenDom() {
+        return childrenDom;
+    }
+
+    public void setChildrenDom(ArrayList<BasicBlock> childrenDom) {
+        this.childrenDom = childrenDom;
+    }
+
+    public ArrayList<BasicBlock> getDomFrontierList() {
+        return domFrontierList == null ? new ArrayList<>() : domFrontierList;
+    }
+
+    public void setDomFrontierList(ArrayList<BasicBlock> domFrontierList) {
+        this.domFrontierList = domFrontierList;
+    }
+
+    public HashSet<IrValue> getIn() {
+        return in;
+    }
+
+    public void setIn(HashSet<IrValue> in) {
+        this.in = in;
+    }
+
+    public HashSet<IrValue> getOut() {
+        return out;
+    }
+
+    public void setOut(HashSet<IrValue> out) {
+        this.out = out;
+    }
+
+    public HashSet<IrValue> getDef() {
+        return def;
+    }
+
+    public void setDef(HashSet<IrValue> def) {
+        this.def = def;
+    }
+
+    public HashSet<IrValue> getUse() {
+        return use;
+    }
+
+    public void setUse(HashSet<IrValue> use) {
+        this.use = use;
     }
 }

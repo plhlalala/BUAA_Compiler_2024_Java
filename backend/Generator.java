@@ -16,7 +16,7 @@ import middleend.LLVM_components.ImmIrValueBool;
 import middleend.LLVM_components.ImmIrValueI32;
 import middleend.LLVM_components.ImmIrValueI8;
 import middleend.LLVM_components.IrValue;
-import middleend.LLVM_components.Module;
+import middleend.LLVM_components.IrModule;
 import middleend.instruction.AllocaInstr;
 import middleend.instruction.BinaryInstr;
 import middleend.instruction.BinaryOp;
@@ -61,7 +61,7 @@ public class Generator {
         return values;
     }
 
-    public void generate(Module IRmodule) {
+    public void generate(IrModule IRmodule) {
         for (GlobalIrValue globalValue : IRmodule.getGlobalVariables()) {
             generateGlobalValue(globalValue);
         }

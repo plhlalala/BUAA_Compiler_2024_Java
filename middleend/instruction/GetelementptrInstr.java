@@ -8,17 +8,17 @@ import middleend.type.LLVMType;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.List;
 
 public class GetelementptrInstr extends Instruction {
     private IrValue basePtr;
-    private ArrayList<IrValue> offsets;
+    private List<IrValue> offsets;
 
     public GetelementptrInstr(IrValue basePtr, ArrayList<IrValue> offsets, BasicBlock parentbasicBlock) {
         super(getGepType(basePtr, offsets), new ArrayList<>(), parentbasicBlock); // 类型是该地址对应的类型
-        this.basePtr = basePtr;
-        this.offsets = offsets;
-        super.addOperands(offsets);
         super.addOperand(basePtr);
+        super.addOperands(offsets);
+        this.offsets = super.getOperands().subList(1, super.getOperands().size());
     }
 
     public static LLVMType getGepType(IrValue elementBase, ArrayList<IrValue> offsets) {
@@ -46,6 +46,7 @@ public class GetelementptrInstr extends Instruction {
     // %elem_ptr = getelementptr [3 x [4 x i32]], [3 x [4 x i32]]* %array, i32 0, i32 2, i32 3
 
     public void dump(PrintWriter writer) {
+        getBasePtr();
         writer.printf("  %s = getelementptr %s, %s %s",
                 this.getName(),
                 basePtr.getTypeOfValue().getTypeClone().subPtr().toString(),
@@ -58,6 +59,7 @@ public class GetelementptrInstr extends Instruction {
     }
 
     public String dumpToString() {
+        getBasePtr();
         StringBuilder sb = new StringBuilder();
         sb.append(this.getName()).append(" = getelementptr ").append(basePtr.getTypeOfValue().getTypeClone().subPtr().toString()).append(", ")
                 .append(basePtr.getTypeOfValue().toString()).append(" ").append(basePtr.getName());
@@ -68,10 +70,11 @@ public class GetelementptrInstr extends Instruction {
     }
 
     public IrValue getBasePtr() {
+        this.basePtr = super.getOperands().get(0);
         return basePtr;
     }
 
     public ArrayList<IrValue> getOffsets() {
-        return offsets;
+        return new ArrayList<>(this.offsets);
     }
 }

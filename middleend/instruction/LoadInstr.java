@@ -11,12 +11,12 @@ public class LoadInstr extends Instruction {
 
     public LoadInstr(IrValue pointer, BasicBlock parentBasicBlock) {
         super(pointer.getTypeOfValue().getTypeClone().subPtr(), new ArrayList<>(), parentBasicBlock);
-        this.pointer = pointer;
         super.addOperand(pointer);
     }
 
     //    %value = load i32, i32* %p
     public void dump(PrintWriter writer) {
+        getPointer();
         writer.printf("  %s = load %s, %s %s\n",
                 this.getName(),
                 getTypeOfValue().toString(),
@@ -25,6 +25,7 @@ public class LoadInstr extends Instruction {
     }
 
     public String dumpToString() {
+        getPointer();
         return String.format("%s = load %s, %s %s",
                 this.getName(),
                 getTypeOfValue().toString(),
@@ -33,6 +34,7 @@ public class LoadInstr extends Instruction {
     }
 
     public IrValue getPointer() {
+        this.pointer = super.getOperands().get(0);
         return pointer;
     }
 }

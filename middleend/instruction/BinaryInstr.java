@@ -14,8 +14,6 @@ public class BinaryInstr extends Instruction {
     public BinaryInstr(BinaryOp op, IrValue left, IrValue right, BasicBlock parentBasicBlock) {
         super(left.getTypeOfValue(), new ArrayList<>(), parentBasicBlock);
         this.op = op;
-        this.left = left;
-        this.right = right;
         super.addOperand(left);
         super.addOperand(right);
     }
@@ -25,19 +23,25 @@ public class BinaryInstr extends Instruction {
     }
 
     public IrValue getLeft() {
+        this.left = super.getOperands().get(0);
         return left;
     }
 
     public IrValue getRight() {
+        this.right = super.getOperands().get(1);
         return right;
     }
 
     public void dump(PrintWriter writer) {
+        getLeft();
+        getRight();
         writer.printf("  %s = %s %s %s, %s\n", this.getName(),
                 op.toString().toLowerCase(), getTypeOfValue().toString(), left.getName(), right.getName());
     }
 
     public String dumpToString() {
+        getLeft();
+        getRight();
         return String.format("%s = %s %s %s, %s", this.getName(),
                 op.toString().toLowerCase(), getTypeOfValue().toString(), left.getName(), right.getName());
     }

@@ -68,8 +68,6 @@ public class MIPSRegister extends MIPSValue {
         LinkedList<MIPSRegister> tRegs = getTRegs();
         LinkedList<MIPSRegister> sRegs = getSRegs();
         tRegs.addAll(sRegs);
-        tRegs.remove(getReg("t7"));
-        tRegs.remove(getReg("t8"));
         return tRegs;
     }
 

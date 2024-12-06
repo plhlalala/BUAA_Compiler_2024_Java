@@ -1,4 +1,3 @@
-import backend.Generator;
 import frontend.error.ErrorRecord;
 import frontend.lexer.Lexer;
 import frontend.parser.Parser;
@@ -6,8 +5,13 @@ import frontend.parser.components.CompUnit;
 import frontend.symtable.SymTable;
 import frontend.symtable.Symbol;
 import frontend.visitor_Symtable.Visitor_Symtable;
-import middleend.LLVM_components.Module;
+import middleend.LLVM_components.BasicBlock;
+import middleend.LLVM_components.Function;
+import middleend.LLVM_components.IrModule;
 import middleend.Visitor_IR;
+import middleend.instruction.BrInstr;
+import middleend.instruction.ReturnInstr;
+import optimize.OptimizationPipeline;
 
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -25,14 +29,18 @@ public class Compiler {
         String errorOutputPath = "error.txt";   // 错误输出文件
         String symbolOutputPath = "symbol.txt";   // 符号表输出文件
         String llvmOutputPath = "llvm_ir.txt";   // 生成的LLVM IR文件
+        String llvmPhiOutputPath = "llvm_phi.txt";   // 生成的LLVM IR文件 (phi版本）
         String mipsOutputPath = "mips.txt";   // 生成的MIPS汇编文件
+        Boolean optimize = true;
 
         try (PushbackReader reader = new PushbackReader(new FileReader(inputFilePath));
              PrintWriter outputWriter = new PrintWriter(new FileWriter(lexerOutputPath));
              PrintWriter errorWriter = new PrintWriter(new FileWriter(errorOutputPath));
              PrintWriter symbolWriter = new PrintWriter(new FileWriter(symbolOutputPath));
              PrintWriter llvmWriter = new PrintWriter(new FileWriter(llvmOutputPath));
-             PrintWriter mipsWriter = new PrintWriter(new FileWriter(mipsOutputPath))) {
+             PrintWriter llvmPhiWriter = new PrintWriter(new FileWriter(llvmPhiOutputPath));
+             PrintWriter mipsWriter = new PrintWriter(new FileWriter(mipsOutputPath))
+        ) {
 
             ArrayList<ErrorRecord> lexerErrorRecords = new ArrayList<>();
             ArrayList<ErrorRecord> parserErrorRecords = new ArrayList<>();
@@ -66,11 +74,16 @@ public class Compiler {
             } else {
                 Visitor_IR irVisitor = new Visitor_IR();
                 irVisitor.visitCompUnit(compUnit);
-                Module module = irVisitor.module;
-                module.dump(llvmWriter);
-                Generator generator = new Generator();
-                generator.generate(module);
-                generator.module.dump(mipsWriter);
+                IrModule irModule = irVisitor.irModule;
+                addRetToBlockAndRemoveUnreachableInstr(irModule);
+                irModule.dump(llvmWriter); // dump 按需补充Block最后一条指令 ret void
+//                if (optimize) {
+//                    new OptimizationPipeline().optimize(irModule);
+//                }
+//                irModule.dump(llvmWriter);
+//                Generator generator = new Generator();
+//                generator.generate(irModule);
+//                generator.module.dump(mipsWriter);
             }
 
             visitor.AllTable.sort(Comparator.comparingInt(o -> o.id));
@@ -83,4 +96,28 @@ public class Compiler {
             e.printStackTrace();
         }
     }
+
+    public static void addRetToBlockAndRemoveUnreachableInstr(IrModule module) {
+        for (Function func : module.getFunctionListWithMain()) {
+            for (BasicBlock block : func.getBasicBlocks()) {
+                if (block.getInstructions().isEmpty() ||
+                        !(block.getLastInstruction() instanceof BrInstr) && !(block.getLastInstruction() instanceof ReturnInstr)) {
+                    block.getInstructions().add(new ReturnInstr(block));
+                } else {
+                    boolean canRemove = false;
+                    for (int i = 0; i < block.getInstructions().size(); i++) {
+                        if (canRemove) {
+                            block.getInstructions().remove(i);
+                            i--;
+                        } else if (block.getInstructions().get(i) instanceof BrInstr || block.getInstructions().get(i) instanceof ReturnInstr) {
+                            canRemove = true;
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+
+
 }

@@ -25,13 +25,13 @@ public class BrInstr extends Instruction {
     public BrInstr(IrValue cond, BasicBlock ifTrue, BasicBlock ifFalse, BasicBlock parentBasicBlock) {
         super(new BasicType(BaseTypeEnum.VOID, 0), new ArrayList<>(), parentBasicBlock);
         super.addOperand(cond);
-        this.cond = cond;
         this.trueBranch = ifTrue;
         this.falseBranch = ifFalse;
         this.dest = null;
     }
 
     public void dump(PrintWriter writer) {
+        getCond();
         if (dest != null) {
             writer.printf("  br label %%%s\n", dest.getName());
         } else {
@@ -41,6 +41,7 @@ public class BrInstr extends Instruction {
     }
 
     public String dumpToString() {
+        getCond();
         if (dest != null) {
             return String.format("br label %%%s", dest.getName());
         } else {
@@ -49,6 +50,10 @@ public class BrInstr extends Instruction {
     }
 
     public IrValue getCond() {
+        if (super.getOperands().isEmpty()) {
+            return null;
+        }
+        this.cond = super.getOperands().get(0);
         return cond;
     }
 

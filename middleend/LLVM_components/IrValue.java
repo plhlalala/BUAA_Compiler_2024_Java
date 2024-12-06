@@ -45,6 +45,12 @@ public abstract class IrValue {
         return useList;
     }
 
+    public void replaceUse(IrValue newValue) {
+        for (Use use : useList) {
+            use.getUser().replaceOperand(use.getPos(), newValue);
+        }
+    }
+
     @Override
     public String toString() {
         return getTypeOfValue().toString() + " " + getName();

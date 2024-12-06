@@ -16,7 +16,7 @@ public class CallInstr extends Instruction {
     public CallInstr(Function func, ArrayList<IrValue> args, BasicBlock parentBasicBlock) {
         super(new BasicType(func.getReturnBaseType(), 0), args, parentBasicBlock);
         this.func = func;
-        this.args = args;
+        this.args = super.getOperands();
     }
 
     // %call = call i32 @f(i32 %3, i32 %4)

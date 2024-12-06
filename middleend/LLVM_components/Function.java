@@ -1,5 +1,6 @@
 package middleend.LLVM_components;
 
+import backend.Value.MIPSRegister;
 import middleend.instruction.AllocaInstr;
 import middleend.type.BaseTypeEnum;
 import middleend.type.BasicType;
@@ -7,6 +8,7 @@ import middleend.type.LLVMType;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class Function extends IrValue {
@@ -24,6 +26,14 @@ public class Function extends IrValue {
     private LLVMType returnType;
     private ArrayList<FunctionParam> params;
     private ArrayList<BasicBlock> basicBlocks;
+
+    private HashMap<BasicBlock, ArrayList<BasicBlock>> preMap;
+    private HashMap<BasicBlock, ArrayList<BasicBlock>> sucMap;
+    private HashMap<BasicBlock, ArrayList<BasicBlock>> domMap;
+    private HashMap<BasicBlock, BasicBlock> parentMap;
+    private HashMap<BasicBlock, ArrayList<BasicBlock>> childMap;
+
+    private HashMap<IrValue, MIPSRegister> value2Reg;
 
     public Function(LLVMType returnType, ArrayList<FunctionParam> params, String name) {
         super(returnType);
@@ -85,5 +95,53 @@ public class Function extends IrValue {
             basicBlock.dump(writer);
         }
         writer.println("}");
+    }
+
+    public void setPreMap(HashMap<BasicBlock, ArrayList<BasicBlock>> preMap) {
+        this.preMap = preMap;
+    }
+
+    public void setSucMap(HashMap<BasicBlock, ArrayList<BasicBlock>> sucMap) {
+        this.sucMap = sucMap;
+    }
+
+    public void setDomMap(HashMap<BasicBlock, ArrayList<BasicBlock>> domMap) {
+        this.domMap = domMap;
+    }
+
+    public void setParentMap(HashMap<BasicBlock, BasicBlock> parentMap) {
+        this.parentMap = parentMap;
+    }
+
+    public void setChildMap(HashMap<BasicBlock, ArrayList<BasicBlock>> childMap) {
+        this.childMap = childMap;
+    }
+
+    public HashMap<BasicBlock, ArrayList<BasicBlock>> getPreMap() {
+        return preMap;
+    }
+
+    public HashMap<BasicBlock, ArrayList<BasicBlock>> getSucMap() {
+        return sucMap;
+    }
+
+    public HashMap<BasicBlock, ArrayList<BasicBlock>> getDomMap() {
+        return domMap;
+    }
+
+    public HashMap<BasicBlock, BasicBlock> getParentMap() {
+        return parentMap;
+    }
+
+    public HashMap<BasicBlock, ArrayList<BasicBlock>> getChildMap() {
+        return childMap;
+    }
+
+    public void setValue2Reg(HashMap<IrValue, MIPSRegister> value2Reg) {
+        this.value2Reg = value2Reg;
+    }
+
+    public HashMap<IrValue, MIPSRegister> getValue2Reg() {
+        return value2Reg;
     }
 }
