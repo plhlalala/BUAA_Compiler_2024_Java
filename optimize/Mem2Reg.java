@@ -123,7 +123,7 @@ public class Mem2Reg {
                         valueList.add(new ImmIrValueI8(114));
                     }
                 }
-                loadInstr.replaceUse(valueList.getLast());
+                loadInstr.replaceAllUse(valueList.getLast());
                 iterator.remove();
             } else if (instr instanceof PhiInstr phiInstr && defInstructions.contains(phiInstr)) {
                 valueList.add(phiInstr);

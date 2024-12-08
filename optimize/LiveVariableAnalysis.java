@@ -44,15 +44,14 @@ public class LiveVariableAnalysis {
                 }
                 outMap.put(bb, newOut);
                 HashSet<IrValue> newIn = new HashSet<>(newOut);
-                newIn.removeAll(bb.getUse());
-                newIn.addAll(bb.getDef());
+                newIn.removeAll(bb.getDef());
+                newIn.addAll(bb.getUse());
                 if (!newIn.equals(inMap.get(bb))) {
                     inMap.put(bb, newIn);
                     changed = true;
                 }
             }
         }
-
         for (BasicBlock block : func.getBasicBlocks()) {
             block.setIn(inMap.get(block));
             block.setOut(outMap.get(block));

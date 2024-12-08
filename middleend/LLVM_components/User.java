@@ -33,11 +33,15 @@ public class User extends IrValue {
         return operands;
     }
 
-    public int findOperand(IrValue operand) {
-        return operands.indexOf(operand);
+    public void replaceOneOperand(int pos, IrValue newOperand) {
+        if (operands.get(pos) != null) {
+            operands.get(pos).deleteUse(this, pos);
+        }
+        operands.set(pos, newOperand);
+        newOperand.addUse(this, pos);
     }
 
-    public void replaceOperand(int pos, IrValue newOperand) {
+    public void replaceOneAndNotModifyUseValue(int pos, IrValue newOperand) { // 用于replaceAllUse,让原来的值自己删除uselist
         operands.set(pos, newOperand);
         newOperand.addUse(this, pos);
     }

@@ -30,7 +30,10 @@ public class Data {
     public String toString() {
         if (string == null) {
             StringBuilder sb = new StringBuilder();
-            sb.append(label).append("    ").append(dataType.toString()).append("    ");
+            sb.append(label);
+            int len = (8 - label.toString().length());
+            sb.append(" ".repeat(Math.max(2, len)));
+            sb.append(dataType.toString()).append("    ");
             for (int i = 0; i < values.size(); i++) {
                 sb.append(values.get(i));
                 if (i != values.size() - 1) {

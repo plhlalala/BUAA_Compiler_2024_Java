@@ -19,26 +19,34 @@ public class InstrText extends Text {
         StringBuilder sb = new StringBuilder();
         sb.append("    ");
         sb.append(IntstrName);
-        for (MIPSValue arg : args) {
-            sb.append(" ");
+        int len = 7 - IntstrName.length();
+        sb.append(" ".repeat(Math.max(2, len)));
+
+        int maxArgLength = 7;
+
+        for (int i = 0; i < args.size(); i++) {
+            MIPSValue arg = args.get(i);
+
             if (arg instanceof MIPSLabel label) {
                 sb.append(label.getLabelName());
-                int len = label.getLabelName().length();
-                if (len < 6) {
-                    sb.append(" ".repeat(6 - len));
+                len = label.getLabelName().length();
+                if (len < maxArgLength) {
+                    sb.append(" ".repeat(maxArgLength - len));
                 }
             } else {
                 sb.append(arg.toString());
-                int len = arg.toString().length();
-                if (len < 6) {
-                    sb.append(" ".repeat(6 - len));
+                len = arg.toString().length();
+                if (len < maxArgLength) {
+                    sb.append(" ".repeat(maxArgLength - len));
                 }
             }
-            if (args.indexOf(arg) != args.size() - 1) {
+
+            if (i != args.size() - 1) {
                 sb.append(",");
             }
         }
         return sb.toString();
     }
+
 
 }

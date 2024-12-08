@@ -11,6 +11,8 @@ public class MIPSRegister extends MIPSValue {
     public static final MIPSRegister V1;
     public static final MIPSRegister K0;
     public static final MIPSRegister K1;
+    public static final MIPSRegister GP;
+    public static final MIPSRegister FP;
     public static final HashMap<String, MIPSRegister> registerMap = new HashMap<>();
 
     static {
@@ -21,6 +23,8 @@ public class MIPSRegister extends MIPSValue {
         V1 = new MIPSRegister("v1");
         K0 = new MIPSRegister("k0");
         K1 = new MIPSRegister("k1");
+        GP = new MIPSRegister("gp");
+        FP = new MIPSRegister("fp");
         for (int i = 0; i < 4; i++) {
             new MIPSRegister("a" + i);
         }

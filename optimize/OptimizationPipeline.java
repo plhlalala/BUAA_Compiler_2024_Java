@@ -10,8 +10,8 @@ public class OptimizationPipeline {
         new BlockSimplify().simplify(module);
         new CFG().optimize(module);
         new Mem2Reg().optimize(module);
-//      new LiveVariableAnalysis().optimize(module);
-//      new Allocator().optimize(module);
-//      new PhiRemove().optimize(module);
+        new LiveVariableAnalysis().optimize(module);
+        new Allocator().optimize(module);
+        new PhiRemove().optimize(module);
     }
 }

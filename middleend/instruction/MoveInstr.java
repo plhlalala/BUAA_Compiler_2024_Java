@@ -5,6 +5,7 @@ import middleend.LLVM_components.IrValue;
 import middleend.type.BaseTypeEnum;
 import middleend.type.BasicType;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public class MoveInstr extends Instruction {
@@ -24,16 +25,20 @@ public class MoveInstr extends Instruction {
     }
 
     public void setDst(IrValue dst) {
-        replaceOperand(0, dst);
+        replaceOneOperand(0, dst);
     }
 
     public void setSrc(IrValue src) {
-        replaceOperand(1, src);
+        replaceOneOperand(1, src);
+    }
+    
+    @Override
+    public void dump(PrintWriter writer) {
+        writer.printf("  move %s %s\n", getDst().getName(), getSrc().getName());
     }
 
-//    @Override
-//    public String toString() {
-//        ArrayList<IrValue> operands = getOperands();
-//        return "move " + operands.get(0).getTypeOfValue() + " " + operands.get(0).getName() + ", " + operands.get(1).getName();
-//    }
+    @Override
+    public String dumpToString() {
+        return String.format("  move %s %s", getDst().getName(), getSrc().getName());
+    }
 }

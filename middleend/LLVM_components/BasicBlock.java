@@ -193,19 +193,37 @@ public class BasicBlock extends IrValue {
         return instr;
     }
 
-    public void addBlockAndInsertPcopyInstrToLast(BasicBlock sucblock, PcopyInstr pcopyInstr) {
+    public IrValue insertBeforeLast(Instruction instruction) {
+        this.instructions.add(this.instructions.size() - 1, instruction);
+        instruction.setParentBasicBlock(this);
+        return instruction;
+    }
+
+    /**
+     * 将一个新的中间基本块插入到当前基本块和目标基本块之间，并插入 Pcopy 指令。
+     * 同时更新基本块的控制流图，确保前后继关系正确。
+     *
+     * @param sucblock   目标基本块，当前基本块的后继
+     * @param pcopyInstr 要插入的 Pcopy 指令
+     */
+    public void addBlockAndInsertPcopyInstr(BasicBlock sucblock, PcopyInstr pcopyInstr) {
         BasicBlock mid = new BasicBlock(this.parentFunction);
-        this.parentFunction.getBasicBlocks().add
-                (this.parentFunction.getBasicBlocks().indexOf(sucblock), mid);
+        this.parentFunction.getBasicBlocks().add(
+                this.parentFunction.getBasicBlocks().indexOf(sucblock), mid);
+        // 将 Pcopy 指令插入到新基本块的末尾
         mid.insertInstrToLast(pcopyInstr);
+        pcopyInstr.setParentBasicBlock(mid);
+        // 在新基本块中创建跳转指令，跳转到原目标基本块
         mid.createBrInstr(sucblock);
         BrInstr brInstr = (BrInstr) (this.instructions.get(this.instructions.size() - 1));
+        // 判断当前跳转指令的目标（trueBranch 或 falseBranch）是否为目标基本块，若是，则修改为指向中间基本块
         if (brInstr.getTrueBranch().equals(sucblock)) {
             brInstr.setTrueBranch(mid);
         } else {
             brInstr.setFalseBranch(mid);
         }
         this.getSuccessors();
+        // 更新目标基本块的前驱节点列表，将当前基本块从前驱中移除，添加新中间基本块
         sucblock.getPredecessors().add(sucblock.getPredecessors().indexOf(this), mid);
         sucblock.getPredecessors().remove(this);
         mid.setSuccessors(new ArrayList<>());
@@ -213,6 +231,7 @@ public class BasicBlock extends IrValue {
         mid.setPredecessors(new ArrayList<>());
         mid.getPredecessors().add(this);
     }
+
 
     public void buildDefUseChain() {
         def = new HashSet<>();
@@ -224,8 +243,14 @@ public class BasicBlock extends IrValue {
                         use.add(operand);
                     }
                 }
-                def.add(instr);
             } else {
+                if (instructions.get(0) instanceof PhiInstr && instructions.get(instructions.indexOf(instr) - 1) instanceof PhiInstr) {
+                    for (int i = 0; i < instructions.indexOf(instr); i++) {
+                        if (!use.contains(instructions.get(i))) {
+                            def.add(instructions.get(i));
+                        }
+                    }
+                }
                 for (IrValue operand : instr.getOperands()) {
                     if (!def.contains(operand) && (operand instanceof Instruction || operand instanceof FunctionParam || operand instanceof GlobalIrValue)) {
                         use.add(operand);

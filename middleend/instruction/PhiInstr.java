@@ -28,14 +28,7 @@ public class PhiInstr extends Instruction {
 
     public void replaceOperand(IrValue value, BasicBlock block) {
         int pos = preBlocks.indexOf(block);
-        super.replaceOperand(pos, value);
-        value.addUse(this, pos);
-    }
-
-    public void setOperand(BasicBlock block, IrValue value) {
-        int pos = preBlocks.indexOf(block);
-        super.replaceOperand(pos, value);
-        value.addUse(this, pos);
+        super.replaceOneOperand(pos, value);
     }
 
     // %x = phi i32 [ 1, %block1 ], [ 2, %block2 ]

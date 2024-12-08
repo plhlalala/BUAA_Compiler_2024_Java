@@ -15,8 +15,8 @@ import middleend.LLVM_components.GlobalIrValue;
 import middleend.LLVM_components.ImmIrValueBool;
 import middleend.LLVM_components.ImmIrValueI32;
 import middleend.LLVM_components.ImmIrValueI8;
-import middleend.LLVM_components.IrValue;
 import middleend.LLVM_components.IrModule;
+import middleend.LLVM_components.IrValue;
 import middleend.instruction.AllocaInstr;
 import middleend.instruction.BinaryInstr;
 import middleend.instruction.BinaryOp;
@@ -27,6 +27,7 @@ import middleend.instruction.IcmpInstr;
 import middleend.instruction.IcmpOpEnum;
 import middleend.instruction.Instruction;
 import middleend.instruction.LoadInstr;
+import middleend.instruction.MoveInstr;
 import middleend.instruction.ReturnInstr;
 import middleend.instruction.StoreInstr;
 import middleend.instruction.TruncInstr;
@@ -37,29 +38,11 @@ import middleend.type.BasicType;
 import middleend.type.LLVMType;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Generator {
     public final MIPSmodule module = new MIPSmodule();
     private final ValueManager valueManager = new ValueManager(module);
-
-    public static ArrayList<MIPSValue> buildArray(MIPSValue value1, MIPSValue value2) {
-        ArrayList<MIPSValue> values = new ArrayList<>();
-        values.add(value1);
-        values.add(value2);
-        return values;
-    }
-
-    public static ArrayList<MIPSValue> buildArray(MIPSValue value1, MIPSValue value2, MIPSValue value3) {
-        ArrayList<MIPSValue> values = buildArray(value1, value2);
-        values.add(value3);
-        return values;
-    }
-
-    public static ArrayList<MIPSValue> buildArray(MIPSValue value) {
-        ArrayList<MIPSValue> values = new ArrayList<>();
-        values.add(value);
-        return values;
-    }
 
     public void generate(IrModule IRmodule) {
         for (GlobalIrValue globalValue : IRmodule.getGlobalVariables()) {
@@ -105,13 +88,16 @@ public class Generator {
 
     public void generateFunction(Function function) {
         module.addText(new LabelText(function.getName()));
-        valueManager.reset();
+        valueManager.reset(function);
         for (int i = 0; i < function.getParams().size(); i++) {
             if (i < 4) {
                 valueManager.allocRegForPara(function.getParams().get(i), i);
             }
             valueManager.subOffset(4);
             valueManager.addOffSetValueMap(function.getParams().get(i), valueManager.getOffset());
+        }
+        if (!function.getParams().isEmpty()) {
+            valueManager.replaceReg(function.getParams().get(0), MIPSRegister.GP); // 由于a0可能用于系统调用，所以将第一个参数存储到gp中
         }
         for (BasicBlock block : function.getBasicBlocks()) {
             generateBlock(block);
@@ -143,6 +129,8 @@ public class Generator {
             genIcmp(instr);
         } else if (instruction instanceof LoadInstr instr) {
             genLoad(instr);
+        } else if (instruction instanceof MoveInstr instr) {
+            genMove(instr);
         } else if (instruction instanceof ReturnInstr instr) {
             genReturn(instr);
         } else if (instruction instanceof StoreInstr instr) {
@@ -155,6 +143,7 @@ public class Generator {
             System.out.println("Error: Unknown instruction");
         }
     }
+
 
     public void genAlloca(AllocaInstr instr) {
         int mem = calculateMem(instr);
@@ -319,9 +308,12 @@ public class Generator {
         } else {
             ArrayList<IrValue> args = instr.getArgs();
             ArrayList<MIPSRegister> regs = valueManager.getAllocatedRegs();
+            HashMap<MIPSRegister, Integer> tmpOffsetMap = new HashMap<>();
             int curOffset = valueManager.getOffset();
+
             for (MIPSRegister reg : regs) {
                 valueManager.subOffset(4);
+                tmpOffsetMap.put(reg, valueManager.getOffset());
                 module.addText(new InstrText("sw", buildArray(reg, new MIPSOffset(valueManager.getOffset()))));
             }
             valueManager.subOffset(4);
@@ -336,11 +328,16 @@ public class Generator {
                         MIPSRegister reg = valueManager.getRegOfValue(args.get(i));
                         if (reg == null) {
                             loadToRegFromStackBasedOnType(MIPSRegister.getReg("a" + (i)), args.get(i));
+                        } else if (reg.toString().contains("a") || reg.toString().contains("gp")) {
+                            module.addText(new InstrText("lw", buildArray(MIPSRegister.getReg("a" + (i)), new MIPSOffset(tmpOffsetMap.get(reg)))));
                         } else {
                             module.addText(new InstrText("move", buildArray(MIPSRegister.getReg("a" + (i)), reg)));
                         }
                     }
                     valueManager.subOffset(4);
+                    if (i == 0) {
+                        module.addText(new InstrText("move", buildArray(MIPSRegister.GP, MIPSRegister.getReg("a0"))));
+                    }
                 } else {
                     if (args.get(i) instanceof ImmIrValueI32 i32) {
                         module.addText(new InstrText("li", buildArray(MIPSRegister.K0, new MIPSImmediate(i32.getValue()))));
@@ -515,6 +512,43 @@ public class Generator {
         }
     }
 
+
+    private void genMove(MoveInstr instr) {
+        MIPSRegister srcReg = valueManager.getRegOfValue(instr.getSrc()) == null ? MIPSRegister.K0 : valueManager.getRegOfValue(instr.getSrc());
+        MIPSRegister destReg = valueManager.getRegOfValue(instr.getDst()) == null ? MIPSRegister.K1 : valueManager.getRegOfValue(instr.getDst());
+        if (srcReg == destReg) {
+            module.addText(new InstrText("nop", new ArrayList<>()));
+            return;
+        }
+        if (instr.getSrc() instanceof ImmIrValueI32 || instr.getSrc() instanceof ImmIrValueI8 || instr.getSrc() instanceof ImmIrValueBool) {
+            module.addText(new InstrText("li", buildArray(destReg, new MIPSImmediate(Integer.parseInt(instr.getSrc().getName())))));
+        } else if (srcReg != MIPSRegister.K0) {
+            module.addText(new InstrText("move", buildArray(destReg, srcReg)));
+        } else {
+            if (valueManager.containsValueOffset(instr.getSrc())) {
+                int offset = valueManager.getOffSetOfValue(instr.getSrc());
+                module.addText(new InstrText("lw", buildArray(destReg, new MIPSOffset(offset))));
+            } else {
+                // 可能在后面定义，先分配位置，就后面再存储
+                valueManager.subOffset(4);
+                int offset = valueManager.getOffset();
+                valueManager.addOffSetValueMap(instr.getSrc(), offset);
+                module.addText(new InstrText("lw", buildArray(destReg, new MIPSOffset(offset))));
+            }
+        }
+        if (destReg == MIPSRegister.K1) {
+            if (valueManager.containsValueOffset(instr.getDst())) {
+                int offset = valueManager.getOffSetOfValue(instr.getDst());
+                module.addText(new InstrText("sw", buildArray(destReg, new MIPSOffset(offset))));
+            } else {
+                valueManager.subOffset(4);
+                int offset = valueManager.getOffset();
+                valueManager.addOffSetValueMap(instr.getDst(), offset);
+                module.addText(new InstrText("sw", buildArray(destReg, new MIPSOffset(offset))));
+            }
+        }
+    }
+
     public void genReturn(ReturnInstr instr) {
         IrValue retValue = instr.getReturn();
         if (retValue instanceof ImmIrValueI32 i32) { //TODO i8立即数没处理完
@@ -579,7 +613,7 @@ public class Generator {
                     valueManager.addOffSetValueMap(instr, offset); //进行替换
                 }
             } else {
-                valueManager.addRegValueMap(instr, reg);
+                valueManager.replaceReg(instr, reg);
                 module.addText(new InstrText("andi", buildArray(reg, reg, new MIPSImmediate(0xff))));
             }
         }
@@ -610,7 +644,7 @@ public class Generator {
                     valueManager.addOffSetValueMap(instr, offset); //进行替换
                 }
             } else {
-                valueManager.addRegValueMap(instr, reg);
+                valueManager.replaceReg(instr, reg);
                 module.addText(new InstrText("andi", buildArray(reg, reg, new MIPSImmediate(0xff))));
             }
         }
@@ -709,5 +743,24 @@ public class Generator {
                 return -1;
             }
         }
+    }
+
+
+    public static ArrayList<MIPSValue> buildArray(MIPSValue value1, MIPSValue value2) {
+        ArrayList<MIPSValue> values = buildArray(value1);
+        values.add(value2);
+        return values;
+    }
+
+    public static ArrayList<MIPSValue> buildArray(MIPSValue value1, MIPSValue value2, MIPSValue value3) {
+        ArrayList<MIPSValue> values = buildArray(value1, value2);
+        values.add(value3);
+        return values;
+    }
+
+    public static ArrayList<MIPSValue> buildArray(MIPSValue value) {
+        ArrayList<MIPSValue> values = new ArrayList<>();
+        values.add(value);
+        return values;
     }
 }

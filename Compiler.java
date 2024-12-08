@@ -1,3 +1,4 @@
+import backend.Generator;
 import frontend.error.ErrorRecord;
 import frontend.lexer.Lexer;
 import frontend.parser.Parser;
@@ -76,14 +77,14 @@ public class Compiler {
                 irVisitor.visitCompUnit(compUnit);
                 IrModule irModule = irVisitor.irModule;
                 addRetToBlockAndRemoveUnreachableInstr(irModule);
-                irModule.dump(llvmWriter); // dump 按需补充Block最后一条指令 ret void
-//                if (optimize) {
-//                    new OptimizationPipeline().optimize(irModule);
-//                }
-//                irModule.dump(llvmWriter);
-//                Generator generator = new Generator();
-//                generator.generate(irModule);
-//                generator.module.dump(mipsWriter);
+//                irModule.dump(llvmPhiWriter);
+                if (optimize) {
+                    new OptimizationPipeline().optimize(irModule);
+                }
+                irModule.dump(llvmWriter);
+                Generator generator = new Generator();
+                generator.generate(irModule);
+                generator.module.dump(mipsWriter);
             }
 
             visitor.AllTable.sort(Comparator.comparingInt(o -> o.id));
@@ -118,6 +119,4 @@ public class Compiler {
             }
         }
     }
-
-
 }

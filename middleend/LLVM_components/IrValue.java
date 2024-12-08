@@ -45,10 +45,15 @@ public abstract class IrValue {
         return useList;
     }
 
-    public void replaceUse(IrValue newValue) {
+    public void replaceAllUse(IrValue newValue) {
         for (Use use : useList) {
-            use.getUser().replaceOperand(use.getPos(), newValue);
+            use.getUser().replaceOneAndNotModifyUseValue(use.getPos(), newValue);
         }
+        this.useList.clear();
+    }
+
+    public void deleteUse(User user, int pos) {
+        useList.removeIf(use -> use.getUser() == user && use.getPos() == pos);
     }
 
     @Override
