@@ -68,10 +68,11 @@ public class MIPSRegister extends MIPSValue {
         return registerMap.getOrDefault(regName, null);
     }
 
-    public static LinkedList<MIPSRegister> getTregAndSreg() {
+    public static LinkedList<MIPSRegister> getAllFreeRegs() {
         LinkedList<MIPSRegister> tRegs = getTRegs();
         LinkedList<MIPSRegister> sRegs = getSRegs();
         tRegs.addAll(sRegs);
+        tRegs.add(MIPSRegister.FP);
         return tRegs;
     }
 
@@ -82,6 +83,7 @@ public class MIPSRegister extends MIPSValue {
         }
         return kRegs;
     }
+
 
     @Override
     public String toString() {

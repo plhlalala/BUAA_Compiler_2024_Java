@@ -1,9 +1,7 @@
 package middleend.instruction;
 
-import backend.Value.MIPSRegister;
 import middleend.LLVM_components.BasicBlock;
 import middleend.LLVM_components.CloneValue;
-import middleend.LLVM_components.Function;
 import middleend.LLVM_components.ImmIrValueBool;
 import middleend.LLVM_components.ImmIrValueI32;
 import middleend.LLVM_components.ImmIrValueI8;
@@ -12,7 +10,6 @@ import middleend.type.BaseTypeEnum;
 import middleend.type.BasicType;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 
 public class PcopyInstr extends Instruction {
@@ -45,9 +42,6 @@ public class PcopyInstr extends Instruction {
      * @return 返回优化后的移动指令列表。
      */
     public ArrayList<MoveInstr> getMoveInstrs() {
-        // 获取当前基本块所在函数的寄存器映射（Value -> Register）
-        Function func = getParentBasicBlock().getParentFunction();
-        HashMap<IrValue, MIPSRegister> value2Reg = func.getValue2Reg();
         ArrayList<MoveInstr> moveInstrs = new ArrayList<>();
         // 根据目标值和源值生成移动指令
         for (int i = 0; i < dstList.size(); i++) {
@@ -86,33 +80,6 @@ public class PcopyInstr extends Instruction {
             }
             rec.add(value);
         }
-        rec.clear();
-        // 处理寄存器冲突的问题（反向遍历移动指令列表）
-        for (int i = moveInstrs.size() - 1; i >= 0; i--) {
-            IrValue value = moveInstrs.get(i).getSrc();
-            if (!(value instanceof ImmIrValueI32) && !(value instanceof ImmIrValueI8) &&
-                    !(value instanceof ImmIrValueBool) && !rec.contains(value)) {
-                // 查找之前的指令，检测是否存在寄存器冲突
-                for (int j = i - 1; j >= 0; j--) {
-                    // 如果当前值和某个指令的目标寄存器相同，表示有寄存器冲突
-                    if (value2Reg.get(value) != null && value2Reg.get(value).equals(value2Reg.get(moveInstrs.get(j).getDst()))) {
-                        // 通过克隆当前值来解决寄存器冲突
-                        IrValue cloneValue = new CloneValue(value);
-                        // 修改之前所有使用当前值作为源操作数的移动指令
-                        for (MoveInstr instr : moveInstrs) {
-                            if (instr.getSrc().equals(value)) {
-                                instr.setSrc(cloneValue);
-                            }
-                        }
-                        // 在 tmpList 中插入新的移动指令，将当前值赋给克隆值（作为中间变量）
-                        tmpList.add(new MoveInstr(cloneValue, value, getParentBasicBlock()));
-                        break;
-                    }
-                }
-            }
-            rec.add(value);
-        }
-
         tmpList.addAll(moveInstrs);
         return tmpList;
     }

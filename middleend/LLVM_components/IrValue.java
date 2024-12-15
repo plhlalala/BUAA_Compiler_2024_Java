@@ -60,4 +60,8 @@ public abstract class IrValue {
     public String toString() {
         return getTypeOfValue().toString() + " " + getName();
     }
+
+    public int getUseSize() {
+        return useList.size();
+    }
 }

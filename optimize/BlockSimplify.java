@@ -11,7 +11,7 @@ import java.util.HashSet;
 public class BlockSimplify {
     private IrModule module;
 
-    public void simplify(IrModule irModule) {
+    public void optimize(IrModule irModule) {
         this.module = irModule;
         for (Function func : module.getFunctionListWithMain()) {
             for (BasicBlock block : func.getBasicBlocks()) {

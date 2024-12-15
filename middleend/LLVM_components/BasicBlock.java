@@ -237,42 +237,15 @@ public class BasicBlock extends IrValue {
         def = new HashSet<>();
         use = new HashSet<>();
         for (Instruction instr : instructions) {
-            if (instr instanceof PhiInstr) {
-                for (IrValue operand : instr.getOperands()) {
-                    if (operand instanceof Instruction || operand instanceof FunctionParam || operand instanceof GlobalIrValue) {
-                        use.add(operand);
-                    }
-                }
-            } else {
-                if (instructions.get(0) instanceof PhiInstr && instructions.get(instructions.indexOf(instr) - 1) instanceof PhiInstr) {
-                    for (int i = 0; i < instructions.indexOf(instr); i++) {
-                        if (!use.contains(instructions.get(i))) {
-                            def.add(instructions.get(i));
-                        }
-                    }
-                }
-                for (IrValue operand : instr.getOperands()) {
-                    if (!def.contains(operand) && (operand instanceof Instruction || operand instanceof FunctionParam || operand instanceof GlobalIrValue)) {
-                        use.add(operand);
-                    }
-                }
-                if (!use.contains(instr) && judgeIsValue(instr)) {
-                    def.add(instr);
+            for (IrValue operand : instr.getOperands()) {
+                if (!def.contains(operand) && (operand instanceof Instruction || operand instanceof FunctionParam || operand instanceof GlobalIrValue)) {
+                    use.add(operand);
                 }
             }
+            if (!use.contains(instr) && Instruction.judgeIsValue(instr)) {
+                def.add(instr);
+            }
         }
-    }
-
-    public boolean judgeIsValue(Instruction instr) {
-        if (instr instanceof AllocaInstr || instr instanceof BinaryInstr || instr instanceof GetelementptrInstr
-                || instr instanceof LoadInstr || instr instanceof TruncInstr || instr instanceof ZextInstr
-                || instr instanceof PhiInstr || instr instanceof IcmpInstr) {
-            return true;
-        }
-        if (instr instanceof CallInstr callInstr) {
-            return callInstr.getFunc().getReturnBaseType() != BaseTypeEnum.VOID;
-        }
-        return false;
     }
 
     public Instruction getLastInstruction() {

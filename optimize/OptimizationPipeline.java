@@ -7,11 +7,15 @@ public class OptimizationPipeline {
 
     public void optimize(IrModule irModule) {
         this.module = irModule;
-        new BlockSimplify().simplify(module);
+        new BrOptimize().optimize(module);
+        new DeadCodeRemove().optimize(module);
+        new BlockSimplify().optimize(module);
+        new DeadCodeRemove().optimize(module);
         new CFG().optimize(module);
         new Mem2Reg().optimize(module);
+        new PhiRemove().optimize(module);
+        new DeadCodeRemove().optimize(module);
         new LiveVariableAnalysis().optimize(module);
         new Allocator().optimize(module);
-        new PhiRemove().optimize(module);
     }
 }

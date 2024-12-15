@@ -5,17 +5,7 @@ import middleend.LLVM_components.BasicBlock;
 import middleend.LLVM_components.Function;
 import middleend.LLVM_components.IrModule;
 import middleend.LLVM_components.IrValue;
-import middleend.instruction.AllocaInstr;
-import middleend.instruction.BinaryInstr;
-import middleend.instruction.CallInstr;
-import middleend.instruction.GetelementptrInstr;
-import middleend.instruction.IcmpInstr;
 import middleend.instruction.Instruction;
-import middleend.instruction.LoadInstr;
-import middleend.instruction.PhiInstr;
-import middleend.instruction.TruncInstr;
-import middleend.instruction.ZextInstr;
-import middleend.type.BaseTypeEnum;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -64,21 +54,19 @@ public class Allocator {
         }
 
         for (Instruction instr : instructions) {
-            if (!(instr instanceof PhiInstr)) {  // 跳过 Phi 指令
-                for (IrValue operand : instr.getOperands()) {
-                    // 如果该操作数的最后使用指令是当前指令并且它已经分配了寄存器，且该操作数不再被块外的指令使用
-                    if (lastUse.get(operand).equals(instr) && value2Reg.containsKey(operand) && !block.getOut().contains(operand)) {
-                        freeReg(operand);  // 释放该操作数的寄存器
-                        noUseSet.add(operand);  // 记录该操作数不再使用
-                    } else {
-                        updatetTimeQueue(operand);  // 更新该操作数的寄存器使用时间
-                    }
+            for (IrValue operand : instr.getOperands()) {
+                // 如果该操作数的最后使用指令是当前指令并且它已经分配了寄存器，且该操作数不再被块外的指令使用
+                if (lastUse.get(operand).equals(instr) && value2Reg.containsKey(operand) && !block.getOut().contains(operand)) {
+                    freeReg(operand);  // 释放该操作数的寄存器
+                    noUseSet.add(operand);  // 记录该操作数不再使用
+                } else {
+                    updatetTimeQueue(operand);  // 更新该操作数的寄存器使用时间
                 }
             }
-            assert freeRegs.size() + reg2Value.size() == 9;  // 检查寄存器数量是否正确
+            assert freeRegs.size() + reg2Value.size() == MIPSRegister.getAllFreeRegs().size();  // 检查寄存器数量是否正确
             assert timeQueue.size() == reg2Value.size();  // 检查寄存器队列是否正确
-            // 如果该指令是一个值类型的指令（例如算术运算、加载指令等），并且不是 Zext 或 Trunc 指令
-            if (judgeIsValue(instr) && !(instr instanceof ZextInstr) && !(instr instanceof TruncInstr)) {
+            // 如果该指令是一个值类型的指令（例如算术运算、加载指令等）
+            if (Instruction.judgeIsValue(instr)) {
                 defSet.add(instr);  // 记录该指令为定义指令
                 allocReg(instr);  // 分配寄存器
             }
@@ -86,7 +74,7 @@ public class Allocator {
 
         // 处理当前基本块的子块，递归地为它们分配寄存器
         for (BasicBlock child : block.getChildrenDom()) {
-            assert freeRegs.size() + reg2Value.size() == 9;  // 检查寄存器数量是否正确
+            assert freeRegs.size() + reg2Value.size() == MIPSRegister.getAllFreeRegs().size();  // 检查寄存器数量是否正确
             assert timeQueue.size() == reg2Value.size();  // 检查寄存器队列是否正确
             HashMap<MIPSRegister, IrValue> tmpNoUse = new HashMap<>();
             // 遍历当前基本块中的寄存器，检查是否被子块使用
@@ -123,7 +111,7 @@ public class Allocator {
         this.value2Reg = new HashMap<>();  // 值到寄存器的映射
         this.timeQueue = new LinkedList<>();  // 用于 LRU (最久未使用) 策略的队列
         this.freeRegs.clear();
-        this.freeRegs.addAll(MIPSRegister.getTRegs());  // 初始化空闲寄存器队列
+        this.freeRegs.addAll(MIPSRegister.getAllFreeRegs());  // 初始化空闲寄存器队列
     }
 
     /**
@@ -131,13 +119,16 @@ public class Allocator {
      *
      * @param value 需要分配寄存器的值
      */
-    public void allocReg(IrValue value) {
+    public Boolean allocReg(IrValue value) {
         MIPSRegister reg;
         if (!freeRegs.isEmpty()) {  // 如果有空闲寄存器
             reg = freeRegs.pollFirst();
         } else {  // 如果没有空闲寄存器，使用 LRU 策略
             reg = timeQueue.getFirst();
             IrValue removed = reg2Value.get(reg);  // 获取该寄存器对应的值
+            if (removed.getUseSize() > value.getUseSize()) {
+                return false;
+            }
             freeReg(removed);  // 释放该寄存器
             value2Reg.remove(removed);  // 移除值与寄存器的映射
             freeRegs.remove(reg);  // 从空闲寄存器队列中移除该寄存器
@@ -145,6 +136,7 @@ public class Allocator {
         reg2Value.put(reg, value);  // 将寄存器与值关联
         value2Reg.put(value, reg);  // 将值与寄存器映射
         timeQueue.addLast(reg);  // 将寄存器加入使用队列
+        return true;
     }
 
     public void freeReg(IrValue value) {
@@ -171,26 +163,5 @@ public class Allocator {
         freeRegs.remove(reg);  // 从空闲寄存器队列中移除该寄存器
         timeQueue.remove(reg);  // 从使用队列中移除该寄存器
         timeQueue.addLast(reg);  // 将该寄存器重新加入队列
-    }
-
-    /**
-     * 判断指令是否定义了一个值。
-     *
-     * @param instr 需要判断的指令
-     * @return 如果指令定义了一个值，则返回 true；否则返回 false
-     */
-    @SuppressWarnings("DuplicatedCode")
-    public boolean judgeIsValue(Instruction instr) {
-        // 判断各种指令是否定义了一个值（例如算术、加载、比较等指令）
-        if (instr instanceof AllocaInstr || instr instanceof BinaryInstr || instr instanceof GetelementptrInstr
-                || instr instanceof LoadInstr || instr instanceof TruncInstr || instr instanceof ZextInstr
-                || instr instanceof PhiInstr || instr instanceof IcmpInstr) {
-            return true;
-        }
-        // 如果是调用指令，并且该函数有返回值
-        if (instr instanceof CallInstr callInstr) {
-            return callInstr.getFunc().getReturnBaseType() != BaseTypeEnum.VOID;
-        }
-        return false;
     }
 }

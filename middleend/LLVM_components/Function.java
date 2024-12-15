@@ -2,6 +2,15 @@ package middleend.LLVM_components;
 
 import backend.Value.MIPSRegister;
 import middleend.instruction.AllocaInstr;
+import middleend.instruction.BinaryInstr;
+import middleend.instruction.CallInstr;
+import middleend.instruction.GetelementptrInstr;
+import middleend.instruction.IcmpInstr;
+import middleend.instruction.Instruction;
+import middleend.instruction.LoadInstr;
+import middleend.instruction.PhiInstr;
+import middleend.instruction.TruncInstr;
+import middleend.instruction.ZextInstr;
 import middleend.type.BaseTypeEnum;
 import middleend.type.BasicType;
 import middleend.type.LLVMType;

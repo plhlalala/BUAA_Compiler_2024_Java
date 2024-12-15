@@ -3,6 +3,7 @@ package middleend.instruction;
 import middleend.LLVM_components.BasicBlock;
 import middleend.LLVM_components.IrValue;
 import middleend.LLVM_components.User;
+import middleend.type.BaseTypeEnum;
 import middleend.type.LLVMType;
 
 import java.io.PrintWriter;
@@ -41,5 +42,17 @@ public abstract class Instruction extends User {
 
     public String dumpToString() {
         return "instruction";
+    }
+
+    public static boolean judgeIsValue(Instruction instr) {
+        if (instr instanceof AllocaInstr || instr instanceof BinaryInstr || instr instanceof GetelementptrInstr
+                || instr instanceof LoadInstr || instr instanceof TruncInstr || instr instanceof ZextInstr
+                || instr instanceof PhiInstr || instr instanceof IcmpInstr) {
+            return true;
+        }
+        if (instr instanceof CallInstr callInstr) {
+            return callInstr.getFunc().getReturnBaseType() != BaseTypeEnum.VOID;
+        }
+        return false;
     }
 }

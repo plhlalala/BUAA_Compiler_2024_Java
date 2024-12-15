@@ -597,24 +597,38 @@ public class Generator {
 
     public void genTrunc(TruncInstr instr) {
         IrValue value = instr.getIrValue();
-        LLVMType dstType = instr.getDestType();
-        if (value.getTypeOfValue().getBaseType() == BaseTypeEnum.INT && dstType.getBaseType() == BaseTypeEnum.CHAR) {
-            MIPSRegister reg = valueManager.getRegOfValue(value);
-            if (reg == null) {
-                if (value instanceof ImmIrValueI32 i32) {
-                    int truncValue = i32.getValue() & 0xff;
-                    module.addText(new InstrText("li", buildArray(MIPSRegister.K0, new MIPSImmediate(truncValue))));
+        if (value.getTypeOfValue().getBaseType() == BaseTypeEnum.INT && instr.getDestType().getBaseType() == BaseTypeEnum.CHAR) {
+            MIPSRegister srcReg = valueManager.getRegOfValue(value);
+            MIPSRegister destReg = valueManager.getRegOfValue(instr);
+            if (srcReg != null) {
+                if (destReg != null) {
+                    module.addText(new InstrText("andi", buildArray(destReg, srcReg, new MIPSImmediate(0xff))));
+                } else {
                     valueManager.subOffset(4);
                     int offset = valueManager.getOffset();
-                    module.addText(new InstrText("sw", buildArray(MIPSRegister.K0, new MIPSOffset(offset))));
+                    module.addText(new InstrText("sw", buildArray(srcReg, new MIPSOffset(offset))));
                     valueManager.addOffSetValueMap(instr, offset);
-                } else {
-                    int offset = valueManager.getOffSetOfValue(value);
-                    valueManager.addOffSetValueMap(instr, offset); //进行替换
                 }
             } else {
-                valueManager.replaceReg(instr, reg);
-                module.addText(new InstrText("andi", buildArray(reg, reg, new MIPSImmediate(0xff))));
+                if (destReg != null) {
+                    if (value instanceof ImmIrValueI32 i32) {
+                        module.addText(new InstrText("li", buildArray(destReg, new MIPSImmediate(i32.getValue() & 0xff))));
+                    } else {
+                        int offset = valueManager.getOffSetOfValue(value);
+                        module.addText(new InstrText("lb", buildArray(destReg, new MIPSOffset(offset))));
+                    }
+                } else {
+                    if (value instanceof ImmIrValueI32 i32) {
+                        int truncValue = i32.getValue() & 0xff;
+                        module.addText(new InstrText("li", buildArray(MIPSRegister.K0, new MIPSImmediate(truncValue))));
+                        valueManager.subOffset(4);
+                        int offset = valueManager.getOffset();
+                        module.addText(new InstrText("sb", buildArray(MIPSRegister.K0, new MIPSOffset(offset))));
+                    } else {
+                        int offset = valueManager.getOffSetOfValue(value);
+                        valueManager.addOffSetValueMap(instr, offset);
+                    }
+                }
             }
         }
     }
@@ -623,29 +637,49 @@ public class Generator {
         IrValue value = instr.getIrValue();
         LLVMType dstType = instr.getDestType();
         if (value.getTypeOfValue().getBaseType() != BaseTypeEnum.INT && dstType.getBaseType() == BaseTypeEnum.INT) {
-            MIPSRegister reg = valueManager.getRegOfValue(value);
-            if (reg == null) {
-                if (value instanceof ImmIrValueBool bool) {
-                    int zextValue = bool.getValue() == 0 ? 0 : 1;
-                    module.addText(new InstrText("li", buildArray(MIPSRegister.K0, new MIPSImmediate(zextValue))));
-                    valueManager.subOffset(4);
-                    int offset = valueManager.getOffset();
-                    module.addText(new InstrText("sw", buildArray(MIPSRegister.K0, new MIPSOffset(offset))));
-                    valueManager.addOffSetValueMap(instr, offset);
-                } else if (value instanceof ImmIrValueI8 i8) {
-                    int zextValue = i8.getValue() & 0xff;
-                    module.addText(new InstrText("li", buildArray(MIPSRegister.K0, new MIPSImmediate(zextValue))));
-                    valueManager.subOffset(4);
-                    int offset = valueManager.getOffset();
-                    module.addText(new InstrText("sw", buildArray(MIPSRegister.K0, new MIPSOffset(offset))));
-                    valueManager.addOffSetValueMap(instr, offset);
+            MIPSRegister srcReg = valueManager.getRegOfValue(value);
+            MIPSRegister dstReg = valueManager.getRegOfValue(instr);
+            if (dstReg != null) {
+                if (srcReg != null) {
+                    module.addText(new InstrText("move", buildArray(dstReg, srcReg)));
                 } else {
-                    int offset = valueManager.getOffSetOfValue(value);
-                    valueManager.addOffSetValueMap(instr, offset); //进行替换
+                    if (value instanceof ImmIrValueBool bool) {
+                        int zextValue = bool.getValue() == 0 ? 0 : 1;
+                        module.addText(new InstrText("li", buildArray(dstReg, new MIPSImmediate(zextValue))));
+                    } else if (value instanceof ImmIrValueI8 i8) {
+                        int zextValue = i8.getValue() & 0xff;
+                        module.addText(new InstrText("li", buildArray(dstReg, new MIPSImmediate(zextValue))));
+                    } else {
+                        int offset = valueManager.getOffSetOfValue(value);
+                        module.addText(new InstrText("lw", buildArray(dstReg, new MIPSOffset(offset))));
+                    }
                 }
             } else {
-                valueManager.replaceReg(instr, reg);
-                module.addText(new InstrText("andi", buildArray(reg, reg, new MIPSImmediate(0xff))));
+                if (srcReg != null) {
+                    valueManager.subOffset(4);
+                    int offset = valueManager.getOffset();
+                    module.addText(new InstrText("sw", buildArray(srcReg, new MIPSOffset(offset))));
+                    valueManager.addOffSetValueMap(instr, offset);
+                } else {
+                    if (value instanceof ImmIrValueBool bool) {
+                        int zextValue = bool.getValue() == 0 ? 0 : 1;
+                        module.addText(new InstrText("li", buildArray(MIPSRegister.K0, new MIPSImmediate(zextValue))));
+                        valueManager.subOffset(4);
+                        int offset = valueManager.getOffset();
+                        module.addText(new InstrText("sw", buildArray(MIPSRegister.K0, new MIPSOffset(offset))));
+                        valueManager.addOffSetValueMap(instr, offset);
+                    } else if (value instanceof ImmIrValueI8 i8) {
+                        int zextValue = i8.getValue() & 0xff;
+                        module.addText(new InstrText("li", buildArray(MIPSRegister.K0, new MIPSImmediate(zextValue))));
+                        valueManager.subOffset(4);
+                        int offset = valueManager.getOffset();
+                        module.addText(new InstrText("sw", buildArray(MIPSRegister.K0, new MIPSOffset(offset))));
+                        valueManager.addOffSetValueMap(instr, offset);
+                    } else {
+                        int offset = valueManager.getOffSetOfValue(value);
+                        valueManager.addOffSetValueMap(instr, offset);
+                    }
+                }
             }
         }
     }
